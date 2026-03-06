@@ -247,9 +247,10 @@ test_that("column-reference stem colour maps levels to colours", {
     verbose     = FALSE
   )
   cols <- stem_cols(p)
-  # A and B share "North"; C is "South" — exactly 2 distinct colours
-  expect_equal(cols[["A"]], cols[["B"]])
-  expect_false(cols[["A"]] == cols[["C"]])
+  # palette() returns colours positionally (alphabetical: A=1, B=2, C=3).
+  # A and B share "North"; C is "South" — exactly 2 distinct colours.
+  expect_equal(cols[[1L]], cols[[2L]])
+  expect_false(cols[[1L]] == cols[[3L]])
 })
 
 test_that("recycling warning fires when too few stem colours supplied", {
