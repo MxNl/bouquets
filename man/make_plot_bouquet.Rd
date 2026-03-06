@@ -7,68 +7,102 @@
 make_plot_bouquet(
   data,
   time_col = 1,
-  colors = NULL,
+  series_col = 2,
+  value_col = 3,
+  stem_colors = "#3a7d2c",
+  flower_colors = "#f472b6",
+  facet_by = NULL,
   ceiling_pct = 0.8,
   launch_deg = 90,
   marker_every = NULL,
-  show_rings = TRUE,
-  dark_mode = TRUE,
+  show_rings = FALSE,
+  dark_mode = FALSE,
   title = NULL,
   subtitle = NULL,
-  save_to = NULL,
+  hide_legend_after = 10L,
   verbose = TRUE
 )
 }
 \arguments{
-\item{data}{A wide data frame or tibble. One column must be the time index;
-all remaining columns must be numeric and are treated as individual time
-series.}
+\item{data}{A long-format data frame or tibble with at minimum a time
+column, a series identifier column, and a numeric value column. Additional
+factor or character columns may be referenced by \code{stem_colors},
+\code{flower_colors}, and \code{facet_by}.}
 
 \item{time_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The time index
-column. Accepts a bare column name, a string, or a numeric position.
-Defaults to the first column.}
+column. Defaults to the first column.}
 
-\item{colors}{A character vector of hex colour codes, one per series.
-Unnamed vectors are matched to series by position; named vectors are
-matched by name. \code{NULL} (default) generates a perceptually uniform
-palette via \code{\link[grDevices:hcl]{grDevices::hcl()}} that scales to any number of series.}
+\item{series_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The column
+identifying each individual time series (e.g. a station name).
+Defaults to the second column.}
+
+\item{value_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The numeric
+column containing the measured values. Defaults to the third column.}
+
+\item{stem_colors}{Controls the colour of the time series lines. Four
+options are accepted:
+\itemize{
+\item A single hex string — all lines share that colour. Default:
+\code{"#3a7d2c"} (plant green).
+\item A character vector of hex strings, one per series — matched by
+position; recycled with a warning if too short.
+\item \code{"greens"} — each series receives a distinct shade from a curated
+palette of natural greens.
+\item A bare column name referencing a factor or character column in
+\code{data} — each series is coloured by that column's value.
+}}
+
+\item{flower_colors}{Controls the colour of the end-of-series ✿ symbols.
+Four options are accepted:
+\itemize{
+\item A single hex string — all flowers share that colour. Default:
+\code{"#f472b6"} (warm pink).
+\item A character vector of hex strings, one per series — matched by
+position; recycled with a warning if too short.
+\item \code{"blossom"} — each flower is assigned a colour from a curated
+palette of pinks, mauves, and soft corals.
+\item A bare column name referencing a factor or character column in
+\code{data} — each flower is coloured by that column's value.
+}}
+
+\item{facet_by}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> An optional
+bare column name referencing a factor or character column in \code{data}. When
+supplied the plot is split into facets via \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}, one
+panel per level. \code{NULL} (default) produces a single panel.}
 
 \item{ceiling_pct}{A single number in \verb{(0, 1]}. The fraction of the
-theoretical maximum angle to use as \eqn{\theta}. Lower values provide
-more visual headroom between paths; higher values make turns more
-pronounced. Defaults to \code{0.80}.}
+theoretical maximum angle to use as \eqn{\theta}. Lower values give more
+visual headroom; higher values make turns more pronounced. Default \code{0.80}.}
 
 \item{launch_deg}{A single number. The initial heading of all series in
-degrees, measured counter-clockwise from the positive x-axis. \code{90}
-points straight up (north). Defaults to \code{90}.}
+degrees, measured counter-clockwise from the positive x-axis. \code{90} points
+straight up (north). Defaults to \code{90}.}
 
 \item{marker_every}{A positive integer. If supplied, a filled circle is
-plotted at every \code{marker_every}-th step along each path to aid reading
-of temporal progress. \code{NULL} (default) suppresses markers.}
+plotted at every \code{marker_every}-th step to aid reading of temporal
+progress. \code{NULL} (default) suppresses markers.}
 
-\item{show_rings}{Logical. Whether to draw faint concentric reference
-rings centred on the origin. Defaults to \code{TRUE}.}
+\item{show_rings}{Logical. Whether to draw faint concentric reference rings
+centred on the origin. Defaults to \code{FALSE}.}
 
-\item{dark_mode}{Logical. \code{TRUE} (default) uses a dark navy background;
-\code{FALSE} uses a light off-white background.}
+\item{dark_mode}{Logical. \code{TRUE} uses a dark navy background; \code{FALSE}
+(default) uses a light off-white background.}
 
-\item{title}{A string passed to \code{\link[ggplot2:labs]{ggplot2::labs()}} as the plot title.
-\code{NULL} (default) produces no title.}
+\item{title}{A string used as the plot title. \code{NULL} (default) = no title.}
 
-\item{subtitle}{A string passed to \code{\link[ggplot2:labs]{ggplot2::labs()}} as the subtitle.
-\code{NULL} (default) auto-generates a subtitle reporting \eqn{\theta}, the
-binding series, and its heading sweep.}
+\item{subtitle}{A string used as the subtitle. \code{NULL} (default)
+auto-generates a subtitle reporting \eqn{\theta}, the binding series, time
+range, and interval.}
 
-\item{save_to}{A file path string (e.g. \code{"plot.png"}). When supplied the
-plot is saved at 10 × 10 inches and 200 dpi via \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}.
-\code{NULL} (default) does not save.}
+\item{hide_legend_after}{A single positive integer. The legend is suppressed
+when the number of series is greater than or equal to this value.
+Defaults to \code{10}.}
 
-\item{verbose}{Logical. Whether to print angle diagnostics — the heading
-sweep per series, the binding series, and the final \eqn{\theta} — to
-the console. Defaults to \code{TRUE}.}
+\item{verbose}{Logical. Whether to print angle diagnostics to the console.
+Defaults to \code{TRUE}.}
 }
 \value{
-A \link[ggplot2:ggplot]{ggplot2::ggplot} object, returned invisibly.
+A \link[ggplot2:ggplot]{ggplot2::ggplot} object, returned visibly.
 }
 \description{
 Draws each time series as a turtle-graphics path from a shared origin,
@@ -87,33 +121,35 @@ cause that series to complete a full 360° loop.
 \details{
 \subsection{Input format}{
 
-\code{data} must be in \strong{wide} format: one row per time step, one column per
-series, plus the time index column. All series must have the same length.
+\code{data} must be in \strong{long} format: one row per time step per series. Series
+should share the same time index values and have equal length.
 }
 
 \subsection{Algorithm}{
 
-For each series, the signed first difference is binarised to
-\eqn{+1} (increase), \eqn{-1} (decrease), or \eqn{0} (no change).
-The turtle heading after step \eqn{i} is:
+For each series, the signed first difference is binarised to \eqn{+1}
+(increase), \eqn{-1} (decrease), or \eqn{0} (no change). The heading at
+step \eqn{i} is accumulated as:
 
-\deqn{h_i = h_{i-1} + d_i \cdot \theta}
+\deqn{h_i = h_{\text{launch}} + \sum_{k=2}^{i} d_k \cdot \theta}
 
-where \eqn{d_i \in \{-1, 0, +1\}}. The Cartesian coordinates are
-updated as \eqn{(x_i, y_i) = (x_{i-1} + \cos h_i,\; y_{i-1} + \sin h_i)}.
+which is computed in one vectorised pass via \code{\link[base:cumsum]{base::cumsum()}}. The
+Cartesian coordinates follow as:
+\eqn{x_i = \sum_{k=2}^{i} \cos(h_k)}, and similarly for \eqn{y}.
 }
 
 \subsection{Angle derivation}{
 
 A complete loop occurs when the heading sweeps \eqn{\geq 360°}. The sweep
-of a series equals \eqn{(\max C - \min C) \cdot \theta}, where \eqn{C} is
-the cumulative sum of the signed steps. The angle is therefore:
+equals \eqn{(\max C - \min C) \cdot \theta}, where \eqn{C} is the cumulative
+sum of the signed steps. The angle is therefore:
 
-\deqn{\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times \texttt{ceiling\_pct}}
+\deqn{\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times
+  \texttt{ceiling\_pct}}
 
 Note that \code{max(abs(C))} is \strong{not} the correct constraint: a series that
-dips to \eqn{-5} then climbs to \eqn{+20} has a sweep of 25 steps even
-though neither extreme alone reaches 25.
+dips to \eqn{-5} then climbs to \eqn{+20} sweeps 25 steps' worth of angle
+even though neither extreme alone reaches 25.
 }
 }
 \examples{
@@ -122,34 +158,36 @@ n      <- 52
 weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
 season <- sin(seq(0, 2 * pi, length.out = n))
 
-gw_data <- tibble::tibble(
-  week        = weeks,
-  `Station A` = 8.5 + 0.8 * season + cumsum(rnorm(n,  0.00, 0.18)),
-  `Station B` = 7.2 + 0.5 * season + cumsum(rnorm(n,  0.02, 0.22)),
-  `Station C` = 9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15))
+gw_long <- tibble::tibble(
+  week    = rep(weeks, 3),
+  station = rep(c("Station A", "Station B", "Station C"), each = n),
+  region  = rep(c("North", "North", "South"), each = n),
+  level_m = c(
+    8.5 + 0.8 * season + cumsum(rnorm(n,  0.00, 0.18)),
+    7.2 + 0.5 * season + cumsum(rnorm(n,  0.02, 0.22)),
+    9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15))
+  )
 )
 
 # Minimal call
-make_plot_bouquet(gw_data, time_col = week)
+make_plot_bouquet(gw_long,
+  time_col = week, series_col = station, value_col = level_m)
 
-# Full call with all options
+# Column-driven colours and faceting
 make_plot_bouquet(
-  data         = gw_data,
-  time_col     = week,
-  title        = "Groundwater Level Fluctuations \u2014 2023",
-  colors       = c("#4fc3f7", "#81c784", "#ffb74d"),
-  ceiling_pct  = 0.80,
-  launch_deg   = 90,
-  marker_every = 13L,
-  show_rings   = TRUE,
-  dark_mode    = FALSE,
-  save_to      = NULL,
-  verbose      = FALSE
+  data          = gw_long,
+  time_col      = week,
+  series_col    = station,
+  value_col     = level_m,
+  stem_colors   = region,
+  flower_colors = region,
+  facet_by      = region,
+  title         = "Groundwater Level Fluctuations \u2014 2023"
 )
 
 }
 \seealso{
 The technique is structurally related to \strong{DNA walk} visualisations
-(Gates 1986; Yau et al. 2003), which encode nucleotide sequences as
-2-D paths using similar binary-direction rules.
+(Gates 1986; Yau et al. 2003), which encode nucleotide sequences as 2-D
+paths using similar binary-direction rules.
 }
