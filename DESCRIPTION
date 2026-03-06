@@ -14,7 +14,10 @@ Imports:
     ggplot2,
     rlang,
     tibble,
+    cluster,
+    hues,
     stats
 Suggests: 
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    geofacet
 Config/testthat/edition: 3

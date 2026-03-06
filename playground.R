@@ -114,3 +114,37 @@ data_gems |>
     facet_by = hyraum_hd,
     stem_colors = "greens"
   )
+
+data_gems |> 
+  cluster_bouquet(
+    distance = "correlation", 
+    method = "hclust",
+    k = 25
+  ) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.95,
+    flower_color = cluster,
+    facet_by = cluster,
+    stem_colors = "greens"
+  )
+
+
+data_gems |> 
+  cluster_bouquet(
+    distance = "correlation", 
+    method = "hclust",
+    k = 8
+  ) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.95,
+    flower_color = cluster,
+    stem_colors = "greens"
+  )

@@ -61,20 +61,23 @@
 #' @return A named character vector of hex colours, one per series.
 #' @noRd
 .resolve_colors <- function(q, data, path_data, series_names,
-                            keyword, palette, hue_range,
+                            keyword, palette,
                             dark_mode, arg_name) {
   n_series <- length(series_names)
 
   if (rlang::quo_is_symbol(q) && rlang::as_name(q) %in% names(path_data)) {
     # ── Column-reference mode ────────────────────────────────────────────────
+    # hues::iwanthue() spaces colours evenly across the perceptual gamut;
+    # lightness bounds are shifted for dark vs light backgrounds.
     col_name <- rlang::as_name(q)
     lvls     <- unique(as.character(path_data[[col_name]]))
     n_lvls   <- length(lvls)
-    hues     <- seq(hue_range[1], hue_range[2],
-                    length.out = n_lvls + 1L)[seq_len(n_lvls)]
     lvl_cols <- stats::setNames(
-      grDevices::hcl(h = hues %% 360, c = 80,
-                     l = if (dark_mode) 65 else 45),
+      hues::iwanthue(
+        n_lvls,
+        lmin = if (dark_mode) 50 else 30,
+        lmax = if (dark_mode) 85 else 70
+      ),
       lvls
     )
     # One representative value per series (first row)
@@ -280,7 +283,7 @@
 #'   element_text facet_wrap geom_path geom_point geom_text ggplot labs
 #'   margin scale_color_manual scale_fill_manual theme theme_void unit vars
 #' @importFrom ggforce geom_circle
-#' @importFrom grDevices hcl
+#' @importFrom hues iwanthue
 #' @importFrom stats median setNames
 #' @importFrom tibble tibble
 make_plot_bouquet <- function(
@@ -479,7 +482,6 @@ make_plot_bouquet <- function(
     series_names = series_names,
     keyword      = "greens",
     palette      = greens_pal,
-    hue_range    = c(80, 160),
     dark_mode    = dark_mode,
     arg_name     = "stem_colors"
   )
@@ -491,7 +493,6 @@ make_plot_bouquet <- function(
     series_names = series_names,
     keyword      = "blossom",
     palette      = blossom_pal,
-    hue_range    = c(300, 540),
     dark_mode    = dark_mode,
     arg_name     = "flower_colors"
   )
