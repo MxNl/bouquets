@@ -20,6 +20,10 @@ make_plot_bouquet(
   title = NULL,
   subtitle = NULL,
   hide_legend_after = 10L,
+  lon_col = NULL,
+  lat_col = NULL,
+  map_width = 0.35,
+  coord_crs = NULL,
   verbose = TRUE
 )
 }
@@ -98,11 +102,37 @@ range, and interval.}
 when the number of series is greater than or equal to this value.
 Defaults to \code{10}.}
 
+\item{lon_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional bare
+column name containing the longitude of each series location (decimal
+degrees, WGS 84). Must be supplied together with \code{lat_col}. When both are
+provided a location map is attached to the right of the bouquet plot.
+\code{NULL} (default) = no map.}
+
+\item{lat_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional bare
+column name containing the latitude. See \code{lon_col}.}
+
+\item{map_width}{Relative width of the location map panel as a fraction of
+the total combined width. A value of \code{0.35} means the map takes 35 \\% of
+the horizontal space and the bouquet takes 65 \\%. Only used when \code{lon_col}
+and \code{lat_col} are both provided. Defaults to \code{0.35}.}
+
+\item{coord_crs}{Integer or \code{NULL}. The EPSG code of the coordinate
+reference system used by \code{lon_col} and \code{lat_col}. When \code{NULL} (default)
+the function attempts to auto-detect the CRS from the coordinate
+magnitude. Supply an explicit code (e.g. \code{coord_crs = 3035} for
+ETRS89-LAEA, \code{coord_crs = 25832} for ETRS89-UTM32) whenever
+auto-detection gives wrong results. Decimal-degree coordinates
+(WGS84 / EPSG:4326) require no reprojection and this argument is ignored.}
+
 \item{verbose}{Logical. Whether to print angle diagnostics to the console.
 Defaults to \code{TRUE}.}
 }
 \value{
-A \link[ggplot2:ggplot]{ggplot2::ggplot} object, returned visibly.
+When \code{lon_col} and \code{lat_col} are \code{NULL} (default), a
+\link[ggplot2:ggplot]{ggplot2::ggplot} object. When both coordinate columns are supplied, a
+\link[patchwork:patchwork-package]{patchwork} object combining the bouquet
+panel (left) and a location map (right); patchwork objects behave like
+ggplot objects for \code{print()}, \code{ggsave()}, and \code{+}.
 }
 \description{
 Draws each time series as a turtle-graphics path from a shared origin,

@@ -1,23 +1,38 @@
 Package: bouquets
-Title: Creating bouquet plots from time series
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "max-n@posteo.de", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Title: Angular Accumulation Plots for Time Series
+Version: 0.1.0
+Authors@R:
+    person("First", "Last", , "max-n@posteo.de", role = c("aut", "cre"),
+           comment = c(ORCID = ""))
+Description: Creates angular accumulation ("bouquet") plots for collections
+    of time series. Each series is encoded as a sequence of signed directional
+    steps and drawn as a turtle-graphics path that turns left on increases and
+    right on decreases. All series share a common origin and angle, so visual
+    pattern similarity directly reflects similarity in directional dynamics.
+    Companion functions cluster series by directional similarity and
+    optionally attach a geographic location map to the plot.
 License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports: 
+Imports:
+    cluster,
     dplyr,
     ggforce,
     ggplot2,
-    rlang,
-    tibble,
-    cluster,
     hues,
-    stats
-Suggests: 
-    testthat (>= 3.0.0),
-    geofacet
+    rlang,
+    stats,
+    tibble
+Suggests:
+    knitr,
+    mapdata,
+    maps,
+    patchwork,
+    rmarkdown,
+    sf,
+    testthat (>= 3.0.0)
 Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/MxNl/bouquets
+BugReports: https://github.com/MxNl/bouquets/issues
