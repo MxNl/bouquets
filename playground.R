@@ -103,7 +103,7 @@ data_gems |>
     stem_colors = "greens"
   ) +
   theme(
-    subtitle.text = element_text(size = 25)
+    plot.subtitle = element_text(size = 25)
   )
 
 data_gems |> 

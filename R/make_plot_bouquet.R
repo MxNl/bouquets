@@ -603,9 +603,9 @@ make_plot_bouquet <- function(
       n_series, " series  \u00b7  ",
       n_steps, " ", .format_interval(time_vals), " observations",
       "  \u00b7  ",
-      .format_endpoint(min(time_vals, na.rm = TRUE)), " \u25cb",
+      .format_endpoint(min(time_vals, na.rm = TRUE)), " [start]",
       " \u2013 ",
-      .format_endpoint(max(time_vals, na.rm = TRUE)), " \u273f"
+      .format_endpoint(max(time_vals, na.rm = TRUE)), " [end]"
     )
     subtitle <- paste0(
       time_sentence, "\n",
@@ -699,7 +699,7 @@ make_plot_bouquet <- function(
   }
 
   # ── Caption ────────────────────────────────────────────────────────────────
-  caption <- "\u273f\u00a0= last step  \u00b7  \u25cb\u00a0= origin"
+  caption <- "\u273f\u00a0= last step  \u00b7  [o]\u00a0= origin"
   if (!is.null(marker_every)) {
     caption <- paste0(caption,
                       "  \u00b7  \u25cf\u00a0= every ", marker_every, " steps")

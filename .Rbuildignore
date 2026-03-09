@@ -3,3 +3,8 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^playground\.R$
+^LICENSE\.md$
+^Rbuildignore$
+^doc$
+^Meta$
