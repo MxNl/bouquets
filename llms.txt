@@ -16,7 +16,7 @@ The technique is structurally related to DNA walk visualisations (Gates
 ``` r
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("MxNl/bouquets")
+remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
 ```
 
 Optional dependencies that unlock extra features:
@@ -33,9 +33,6 @@ Optional dependencies that unlock extra features:
 ## Basic usage
 
 ``` r
-library(bouquets)
-
-set.seed(42)
 n      <- 52L
 weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
 season <- sin(seq(0, 2 * pi, length.out = n))
@@ -54,34 +51,36 @@ gw_long <- tibble::tibble(
 make_plot_bouquet(gw_long,
   time_col   = week,
   series_col = station,
-  value_col  = level_m
+  value_col  = level_m,
+  verbose    = FALSE
 )
 ```
+
+![](reference/figures/README-basic-1.png)
 
 ------------------------------------------------------------------------
 
 ## Key features
 
-### Four colour modes
-
-Both `stem_colors` (path lines) and `flower_colors` (✿ end markers)
-accept:
+### Keyword colour palettes
 
 ``` r
-# 1. Single hex colour
-make_plot_bouquet(gw_long, ..., stem_colors = "#2d6a9f")
-
-# 2. Named keyword palette
-make_plot_bouquet(gw_long, ..., stem_colors = "greens", flower_colors = "blossom")
-
-# 3. Vector of hex colours (one per series)
-make_plot_bouquet(gw_long, ..., stem_colors = c("#c0392b", "#2980b9", "#27ae60"))
-
-# 4. Bare column name — colours derived from that column's values
-make_plot_bouquet(gw_long, ..., stem_colors = region, flower_colors = region)
+make_plot_bouquet(gw_long,
+  time_col      = week,
+  series_col    = station,
+  value_col     = level_m,
+  stem_colors   = "greens",
+  flower_colors = "blossom",
+  verbose       = FALSE
+)
 ```
 
-### Faceting
+![](reference/figures/README-keywords-1.png)
+
+### Column-driven colours and faceting
+
+Pass a bare column name to colour series by a grouping variable, and
+split into facets with `facet_by`:
 
 ``` r
 make_plot_bouquet(gw_long,
@@ -91,9 +90,31 @@ make_plot_bouquet(gw_long,
   stem_colors   = region,
   flower_colors = region,
   facet_by      = region,
-  title         = "Groundwater dynamics by region"
+  title         = "Groundwater dynamics by region",
+  verbose       = FALSE
 )
 ```
+
+![](reference/figures/README-facet-1.png)
+
+### Dark mode with rings and step markers
+
+``` r
+make_plot_bouquet(gw_long,
+  time_col      = week,
+  series_col    = station,
+  value_col     = level_m,
+  stem_colors   = "greens",
+  flower_colors = "blossom",
+  show_rings    = TRUE,
+  marker_every  = 13L,
+  dark_mode     = TRUE,
+  title         = "Groundwater — dark mode",
+  verbose       = FALSE
+)
+```
+
+![](reference/figures/README-dark-1.png)
 
 ### Clustering
 
@@ -103,11 +124,30 @@ appends a `cluster` column that plugs directly into
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md):
 
 ``` r
-gw_long |>
+set.seed(7)
+n2     <- 52L
+sea2   <- sin(seq(0, 2 * pi, length.out = n2))
+wks2   <- seq(as.Date("2023-01-01"), by = "week", length.out = n2)
+
+gw6 <- tibble::tibble(
+  week    = rep(wks2, 6L),
+  station = rep(paste0("S", 1:6), each = n2),
+  level_m = c(
+    8.5 + 0.8 * sea2 + cumsum(rnorm(n2,  0.00, 0.2)),
+    8.3 + 0.7 * sea2 + cumsum(rnorm(n2,  0.01, 0.2)),
+    7.2 + 0.5 * sea2 + cumsum(rnorm(n2,  0.02, 0.2)),
+    7.0 + 0.6 * sea2 + cumsum(rnorm(n2,  0.00, 0.2)),
+    9.1 + 1.1 * sea2 + cumsum(rnorm(n2, -0.01, 0.2)),
+    9.3 + 1.0 * sea2 + cumsum(rnorm(n2, -0.02, 0.2))
+  )
+)
+
+gw6 |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
-    value_col  = level_m
+    value_col  = level_m,
+    verbose    = FALSE
   ) |>
   make_plot_bouquet(
     time_col      = week,
@@ -115,44 +155,38 @@ gw_long |>
     value_col     = level_m,
     stem_colors   = cluster,
     flower_colors = cluster,
-    facet_by      = cluster
+    facet_by      = cluster,
+    title         = "Series grouped by directional dynamics",
+    verbose       = FALSE
   )
 ```
 
-Five clustering methods are available (`"pca_hclust"`, `"pca_kmeans"`,
-`"hclust"`, `"kmeans"`, `"pam"`) with three distance metrics
-(`"euclidean"`, `"correlation"`, `"manhattan"`). The optimal number of
-clusters is selected automatically via a composite silhouette score, or
-you can specify `k` directly.
+![](reference/figures/README-cluster-1.png)
 
 ### Location map panel
 
 Supply coordinate columns to attach a location map alongside the
-bouquet. Any projected CRS is handled automatically with `coord_crs`:
+bouquet. Any projected CRS is handled via `coord_crs`
+(e.g. `coord_crs = 3035` for ETRS89-LAEA).
 
 ``` r
-make_plot_bouquet(gw_long_with_coords,
+gw_coords <- dplyr::mutate(gw_long,
+  lon = c(rep(9.9, n), rep(13.4, n), rep(8.7, n)),
+  lat = c(rep(51.5, n), rep(52.5, n), rep(50.1, n))
+)
+
+make_plot_bouquet(gw_coords,
   time_col   = week,
   series_col = station,
   value_col  = level_m,
-  lon_col    = easting,
-  lat_col    = northing,
-  coord_crs  = 3035,      # ETRS89-LAEA; omit for WGS84 decimal degrees
-  map_width  = 0.35
+  lon_col    = lon,
+  lat_col    = lat,
+  map_width  = 0.35,
+  verbose    = FALSE
 )
 ```
 
-### Visual options
-
-``` r
-make_plot_bouquet(gw_long, ...,
-  show_rings    = TRUE,   # concentric reference rings
-  marker_every  = 13L,    # dot every N steps
-  dark_mode     = TRUE,   # dark navy background
-  launch_deg    = 45,     # initial heading (default 90° = north)
-  ceiling_pct   = 0.75    # tightness of turns (default 0.80)
-)
-```
+![](reference/figures/README-map-1.png)
 
 ------------------------------------------------------------------------
 
@@ -178,8 +212,10 @@ coordinates follow as a vectorised `cumsum(cos(heading))` /
 
 If you use bouquets in a publication, please cite it as:
 
-    Last, F. (2025). bouquets: Angular accumulation plots for time series.
-    R package version 0.1.0. https://github.com/MxNl/bouquets
+``` R
+Last, F. (2025). bouquets: Angular accumulation plots for time series.
+R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
+```
 
 ------------------------------------------------------------------------
 

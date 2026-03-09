@@ -50,9 +50,6 @@
 <div class="page-header"><h1 id="bouquets-">bouquets <img src="reference/figures/logo.png" align="right" height="139" alt=""><a class="anchor" aria-label="anchor" href="#bouquets-"></a>
 </h1></div>
 <!-- badges: start -->
-<!-- Replace YOUR_GITHUB_USERNAME below with your actual GitHub username, then
-     add the file .github/workflows/R-CMD-check.yaml to your repo (included in
-     this package skeleton) to activate the CI badge. -->
 
 <p><strong>bouquets</strong> creates angular accumulation plots for collections of time series. Each series is encoded as a turtle-graphics path that turns <strong>left</strong> on increases and <strong>right</strong> on decreases — all series share the same origin and turning angle, so paths that look alike come from series with similar directional dynamics, regardless of their absolute values.</p>
 <p>The technique is structurally related to DNA walk visualisations (Gates 1986; Yau et al. 2003).</p>
@@ -63,7 +60,7 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Development version from GitHub</span></span>
 <span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"MxNl/bouquets"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"YOUR_GITHUB_USERNAME/bouquets"</span><span class="op">)</span></span></code></pre></div>
 <p>Optional dependencies that unlock extra features:</p>
 <table class="table">
 <thead><tr class="header">
@@ -95,10 +92,7 @@
 <h2 id="basic-usage">Basic usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/MxNl/bouquets" class="external-link">bouquets</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">n</span>      <span class="op">&lt;-</span> <span class="fl">52L</span></span>
+<code class="sourceCode R"><span><span class="va">n</span>      <span class="op">&lt;-</span> <span class="fl">52L</span></span>
 <span><span class="va">weeks</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-01-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"week"</span>, length.out <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
 <span><span class="va">season</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span>, length.out <span class="op">=</span> <span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -116,33 +110,33 @@
 <span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
 <span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span>
 <span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
-<span>  value_col  <span class="op">=</span> <span class="va">level_m</span></span>
+<span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>  verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-basic-1.png" alt="" width="100%"></p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h2>
 <div class="section level3">
-<h3 id="four-colour-modes">Four colour modes<a class="anchor" aria-label="anchor" href="#four-colour-modes"></a>
+<h3 id="keyword-colour-palettes">Keyword colour palettes<a class="anchor" aria-label="anchor" href="#keyword-colour-palettes"></a>
 </h3>
-<p>Both <code>stem_colors</code> (path lines) and <code>flower_colors</code> (✿ end markers) accept:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1. Single hex colour</span></span>
-<span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">...</span>, stem_colors <span class="op">=</span> <span class="st">"#2d6a9f"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 2. Named keyword palette</span></span>
-<span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">...</span>, stem_colors <span class="op">=</span> <span class="st">"greens"</span>, flower_colors <span class="op">=</span> <span class="st">"blossom"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3. Vector of hex colours (one per series)</span></span>
-<span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">...</span>, stem_colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#c0392b"</span>, <span class="st">"#2980b9"</span>, <span class="st">"#27ae60"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 4. Bare column name — colours derived from that column's values</span></span>
-<span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">...</span>, stem_colors <span class="op">=</span> <span class="va">region</span>, flower_colors <span class="op">=</span> <span class="va">region</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
+<span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
+<span>  series_col    <span class="op">=</span> <span class="va">station</span>,</span>
+<span>  value_col     <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>  stem_colors   <span class="op">=</span> <span class="st">"greens"</span>,</span>
+<span>  flower_colors <span class="op">=</span> <span class="st">"blossom"</span>,</span>
+<span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-keywords-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
-<h3 id="faceting">Faceting<a class="anchor" aria-label="anchor" href="#faceting"></a>
+<h3 id="column-driven-colours-and-faceting">Column-driven colours and faceting<a class="anchor" aria-label="anchor" href="#column-driven-colours-and-faceting"></a>
 </h3>
+<p>Pass a bare column name to colour series by a grouping variable, and split into facets with <code>facet_by</code>:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
 <span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
@@ -151,19 +145,58 @@
 <span>  stem_colors   <span class="op">=</span> <span class="va">region</span>,</span>
 <span>  flower_colors <span class="op">=</span> <span class="va">region</span>,</span>
 <span>  facet_by      <span class="op">=</span> <span class="va">region</span>,</span>
-<span>  title         <span class="op">=</span> <span class="st">"Groundwater dynamics by region"</span></span>
+<span>  title         <span class="op">=</span> <span class="st">"Groundwater dynamics by region"</span>,</span>
+<span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-facet-1.png" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="dark-mode-with-rings-and-step-markers">Dark mode with rings and step markers<a class="anchor" aria-label="anchor" href="#dark-mode-with-rings-and-step-markers"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
+<span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
+<span>  series_col    <span class="op">=</span> <span class="va">station</span>,</span>
+<span>  value_col     <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>  stem_colors   <span class="op">=</span> <span class="st">"greens"</span>,</span>
+<span>  flower_colors <span class="op">=</span> <span class="st">"blossom"</span>,</span>
+<span>  show_rings    <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  marker_every  <span class="op">=</span> <span class="fl">13L</span>,</span>
+<span>  dark_mode     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  title         <span class="op">=</span> <span class="st">"Groundwater — dark mode"</span>,</span>
+<span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-dark-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="clustering">Clustering<a class="anchor" aria-label="anchor" href="#clustering"></a>
 </h3>
 <p><code><a href="reference/cluster_bouquet.html">cluster_bouquet()</a></code> groups series by the similarity of their directional sequences and appends a <code>cluster</code> column that plugs directly into <code><a href="reference/make_plot_bouquet.html">make_plot_bouquet()</a></code>:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gw_long</span> <span class="op">|&gt;</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span></span>
+<span><span class="va">n2</span>     <span class="op">&lt;-</span> <span class="fl">52L</span></span>
+<span><span class="va">sea2</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span> <span class="op">*</span> <span class="va">pi</span>, length.out <span class="op">=</span> <span class="va">n2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">wks2</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2023-01-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"week"</span>, length.out <span class="op">=</span> <span class="va">n2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gw6</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  week    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">wks2</span>, <span class="fl">6L</span><span class="op">)</span>,</span>
+<span>  station <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"S"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span>, each <span class="op">=</span> <span class="va">n2</span><span class="op">)</span>,</span>
+<span>  level_m <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="fl">8.5</span> <span class="op">+</span> <span class="fl">0.8</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>,  <span class="fl">0.00</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fl">8.3</span> <span class="op">+</span> <span class="fl">0.7</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>,  <span class="fl">0.01</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fl">7.2</span> <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>,  <span class="fl">0.02</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fl">7.0</span> <span class="op">+</span> <span class="fl">0.6</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>,  <span class="fl">0.00</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fl">9.1</span> <span class="op">+</span> <span class="fl">1.1</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>, <span class="op">-</span><span class="fl">0.01</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fl">9.3</span> <span class="op">+</span> <span class="fl">1.0</span> <span class="op">*</span> <span class="va">sea2</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n2</span>, <span class="op">-</span><span class="fl">0.02</span>, <span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gw6</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
 <span>    time_col   <span class="op">=</span> <span class="va">week</span>,</span>
 <span>    series_col <span class="op">=</span> <span class="va">station</span>,</span>
-<span>    value_col  <span class="op">=</span> <span class="va">level_m</span></span>
+<span>    value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>    verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
 <span>    time_col      <span class="op">=</span> <span class="va">week</span>,</span>
@@ -171,36 +204,32 @@
 <span>    value_col     <span class="op">=</span> <span class="va">level_m</span>,</span>
 <span>    stem_colors   <span class="op">=</span> <span class="va">cluster</span>,</span>
 <span>    flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span>
-<span>    facet_by      <span class="op">=</span> <span class="va">cluster</span></span>
+<span>    facet_by      <span class="op">=</span> <span class="va">cluster</span>,</span>
+<span>    title         <span class="op">=</span> <span class="st">"Series grouped by directional dynamics"</span>,</span>
+<span>    verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p>Five clustering methods are available (<code>"pca_hclust"</code>, <code>"pca_kmeans"</code>, <code>"hclust"</code>, <code>"kmeans"</code>, <code>"pam"</code>) with three distance metrics (<code>"euclidean"</code>, <code>"correlation"</code>, <code>"manhattan"</code>). The optimal number of clusters is selected automatically via a composite silhouette score, or you can specify <code>k</code> directly.</p>
+<p><img src="reference/figures/README-cluster-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="location-map-panel">Location map panel<a class="anchor" aria-label="anchor" href="#location-map-panel"></a>
 </h3>
-<p>Supply coordinate columns to attach a location map alongside the bouquet. Any projected CRS is handled automatically with <code>coord_crs</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long_with_coords</span>,</span>
+<p>Supply coordinate columns to attach a location map alongside the bouquet. Any projected CRS is handled via <code>coord_crs</code> (e.g. <code>coord_crs = 3035</code> for ETRS89-LAEA).</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gw_coords</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
+<span>  lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">9.9</span>, <span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">13.4</span>, <span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">8.7</span>, <span class="va">n</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">51.5</span>, <span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">52.5</span>, <span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">50.1</span>, <span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_coords</span>,</span>
 <span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span>
 <span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
 <span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
-<span>  lon_col    <span class="op">=</span> <span class="va">easting</span>,</span>
-<span>  lat_col    <span class="op">=</span> <span class="va">northing</span>,</span>
-<span>  coord_crs  <span class="op">=</span> <span class="fl">3035</span>,      <span class="co"># ETRS89-LAEA; omit for WGS84 decimal degrees</span></span>
-<span>  map_width  <span class="op">=</span> <span class="fl">0.35</span></span>
+<span>  lon_col    <span class="op">=</span> <span class="va">lon</span>,</span>
+<span>  lat_col    <span class="op">=</span> <span class="va">lat</span>,</span>
+<span>  map_width  <span class="op">=</span> <span class="fl">0.35</span>,</span>
+<span>  verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="visual-options">Visual options<a class="anchor" aria-label="anchor" href="#visual-options"></a>
-</h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">...</span>,</span>
-<span>  show_rings    <span class="op">=</span> <span class="cn">TRUE</span>,   <span class="co"># concentric reference rings</span></span>
-<span>  marker_every  <span class="op">=</span> <span class="fl">13L</span>,    <span class="co"># dot every N steps</span></span>
-<span>  dark_mode     <span class="op">=</span> <span class="cn">TRUE</span>,   <span class="co"># dark navy background</span></span>
-<span>  launch_deg    <span class="op">=</span> <span class="fl">45</span>,     <span class="co"># initial heading (default 90° = north)</span></span>
-<span>  ceiling_pct   <span class="op">=</span> <span class="fl">0.75</span>    <span class="co"># tightness of turns (default 0.80)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-map-1.png" alt="" width="100%"></p>
 <hr>
 </div>
 </div>
@@ -218,8 +247,8 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use bouquets in a publication, please cite it as:</p>
-<pre><code>Last, F. (2025). bouquets: Angular accumulation plots for time series.
-R package version 0.1.0. https://github.com/MxNl/bouquets</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>Last, <span class="fu">F.</span> (<span class="dv">2025</span>). bouquets<span class="sc">:</span> Angular accumulation plots <span class="cf">for</span> time series.</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>R package version <span class="dv">0</span>.<span class="dv">1</span>.<span class="fl">0.</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>YOUR_GITHUB_USERNAME<span class="sc">/</span>bouquets</span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">
@@ -263,10 +292,10 @@ R package version 0.1.0. https://github.com/MxNl/bouquets</code></pre>
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://YOUR_GITHUB_USERNAME.github.io/bouquets/" class="external-link"><img src="https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://creativecommons.org/licenses/by/4.0/" class="external-link"><img src="https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg" alt="License: CC BY 4.0"></a></li>
-<li><a href="https://YOU.github.io/bouquets/" class="external-link"><img src="https://github.com/YOU/bouquets/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 </ul>
 </div>
 
