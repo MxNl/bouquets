@@ -51,13 +51,19 @@ weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
 season <- sin(seq(0, 2 * pi, length.out = n))
 
 gw_long <- tibble::tibble(
-  week    = rep(weeks, 3L),
-  station = rep(c("Station A", "Station B", "Station C"), each = n),
-  region  = rep(c("North", "North", "South"), each = n),
+  week    = rep(weeks, 8L),
+  station = rep(paste0("Station ", LETTERS[1:8]), each = n),
+  region  = rep(c("North", "North", "North", "North",
+                  "South", "South", "South", "South"), each = n),
   level_m = c(
     8.5 + 0.8 * season + cumsum(rnorm(n,  0.00, 0.18)),
     7.2 + 0.5 * season + cumsum(rnorm(n,  0.02, 0.22)),
-    9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15))
+    9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15)),
+    6.8 + 0.9 * season + cumsum(rnorm(n,  0.01, 0.20)),
+    5.4 + 1.2 * season + cumsum(rnorm(n, -0.02, 0.17)),
+    7.7 + 0.6 * season + cumsum(rnorm(n,  0.00, 0.21)),
+    8.9 + 0.7 * season + cumsum(rnorm(n,  0.01, 0.19)),
+    6.2 + 1.0 * season + cumsum(rnorm(n, -0.01, 0.16))
   )
 )
 
@@ -137,24 +143,7 @@ sequences and appends a `cluster` column that plugs directly into
 
 ``` r
 set.seed(7)
-n2     <- 52L
-sea2   <- sin(seq(0, 2 * pi, length.out = n2))
-wks2   <- seq(as.Date("2023-01-01"), by = "week", length.out = n2)
-
-gw6 <- tibble::tibble(
-  week    = rep(wks2, 6L),
-  station = rep(paste0("S", 1:6), each = n2),
-  level_m = c(
-    8.5 + 0.8 * sea2 + cumsum(rnorm(n2,  0.00, 0.2)),
-    8.3 + 0.7 * sea2 + cumsum(rnorm(n2,  0.01, 0.2)),
-    7.2 + 0.5 * sea2 + cumsum(rnorm(n2,  0.02, 0.2)),
-    7.0 + 0.6 * sea2 + cumsum(rnorm(n2,  0.00, 0.2)),
-    9.1 + 1.1 * sea2 + cumsum(rnorm(n2, -0.01, 0.2)),
-    9.3 + 1.0 * sea2 + cumsum(rnorm(n2, -0.02, 0.2))
-  )
-)
-
-gw6 |>
+gw_long |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
@@ -182,9 +171,10 @@ bouquet. Any projected CRS is handled via `coord_crs`
 (e.g. `coord_crs = 3035` for ETRS89-LAEA).
 
 ``` r
+# Stations spread across Germany north to south, coast to border
 gw_coords <- dplyr::mutate(gw_long,
-  lon = c(rep(9.9, n), rep(13.4, n), rep(8.7, n)),
-  lat = c(rep(51.5, n), rep(52.5, n), rep(50.1, n))
+  lon = rep(c(6.9, 13.4, 9.9, 12.1, 7.5, 11.2, 8.7, 14.8), each = n),
+  lat = rep(c(53.6, 52.5, 51.5, 48.1, 51.2, 49.8, 47.8, 50.9), each = n)
 )
 
 make_plot_bouquet(gw_coords,
@@ -193,7 +183,7 @@ make_plot_bouquet(gw_coords,
   value_col  = level_m,
   lon_col    = lon,
   lat_col    = lat,
-  map_width  = 0.35,
+  map_width  = 0.38,
   verbose    = FALSE
 )
 ```
@@ -205,16 +195,17 @@ make_plot_bouquet(gw_coords,
 ## How it works
 
 For each series, the signed first difference is binarised to +1
-(increase), −1 (decrease), or 0 (no change). The heading at step *i* is:
+(increase), -1 (decrease), or 0 (no change). The heading at step *i*
+accumulates as:
 
-$$h_i = h_{\text{launch}} + \sum_{k=2}^{i} d_k \cdot \theta$$
+> *h*\_i = *h*\_launch + sum(*d*\_k x theta) for k = 2..i
 
-The angle θ is derived so that even the most volatile series in the
+The angle theta is derived so that even the most volatile series in the
 dataset never completes a full loop:
 
-$$\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times \texttt{ceiling\_pct}$$
+> theta = 360 / max_over_series(max(C) - min(C)) x ceiling_pct
 
-where *C*ₛ is the cumulative sum of signed steps for series *s*. All
+where *C* is the cumulative sum of signed steps for each series. All
 coordinates follow as a vectorised `cumsum(cos(heading))` /
 `cumsum(sin(heading))`.
 
@@ -232,7 +223,7 @@ If you use bouquets in a publication, please cite it as:
 ## References
 
 Gates, M. A. (1986). A simple way to look at DNA. *Journal of
-Theoretical Biology*, 119(3), 319–328.
+Theoretical Biology*, 119(3), 319-328.
 
 Yau, S. S.-T., et al. (2003). DNA sequence representation without
-degeneracy. *Nucleic Acids Research*, 31(12), 3078–3080.
+degeneracy. *Nucleic Acids Research*, 31(12), 3078-3080.
