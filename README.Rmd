@@ -1,32 +1,46 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file. -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.path  = "man/figures/README-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi       = 150,
+  out.width = "100%"
+)
+set.seed(42)
+library(bouquets)
+```
 
 # bouquets <img src="man/figures/logo.png" align="right" height="139" alt="" />
 
 <!-- badges: start -->
-
 [![R-CMD-check](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/pkgdown.yaml/badge.svg)](https://YOUR_GITHUB_USERNAME.github.io/bouquets/)
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![License: CC BY
-4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 <!-- badges: end -->
 
 **bouquets** creates angular accumulation plots for collections of time
-series. Each series is encoded as a turtle-graphics path that turns
-**left** on increases and **right** on decreases — all series share the
-same origin and turning angle, so paths that look alike come from series
-with similar directional dynamics, regardless of their absolute values.
+series. Each series is encoded as a turtle-graphics path that turns **left**
+on increases and **right** on decreases — all series share the same origin
+and turning angle, so paths that look alike come from series with similar
+directional dynamics, regardless of their absolute values.
 
-The technique is structurally related to DNA walk visualisations (Gates
-1986; Yau et al. 2003).
+The technique is structurally related to DNA walk visualisations (Gates 1986;
+Yau et al. 2003).
 
-------------------------------------------------------------------------
+---
 
 ## Installation
 
-``` r
+```r
 # Development version from GitHub
 # install.packages("remotes")
 remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
@@ -34,18 +48,18 @@ remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
 
 Optional dependencies that unlock extra features:
 
-| Package     | Feature                                    |
-|-------------|--------------------------------------------|
+| Package | Feature |
+|---|---|
 | `patchwork` | Location map panel (`lon_col` + `lat_col`) |
-| `maps`      | Map background (required for map panel)    |
-| `mapdata`   | Sub-national boundaries on the map         |
-| `sf`        | Reprojection of non-WGS84 coordinates      |
+| `maps` | Map background (required for map panel) |
+| `mapdata` | Sub-national boundaries on the map |
+| `sf` | Reprojection of non-WGS84 coordinates |
 
-------------------------------------------------------------------------
+---
 
 ## Basic usage
 
-``` r
+```{r basic}
 n      <- 52L
 weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
 season <- sin(seq(0, 2 * pi, length.out = n))
@@ -69,15 +83,13 @@ make_plot_bouquet(gw_long,
 )
 ```
 
-<img src="man/figures/README-basic-1.png" alt="" width="100%" />
-
-------------------------------------------------------------------------
+---
 
 ## Key features
 
 ### Keyword colour palettes
 
-``` r
+```{r keywords}
 make_plot_bouquet(gw_long,
   time_col      = week,
   series_col    = station,
@@ -88,14 +100,12 @@ make_plot_bouquet(gw_long,
 )
 ```
 
-<img src="man/figures/README-keywords-1.png" alt="" width="100%" />
-
 ### Column-driven colours and faceting
 
-Pass a bare column name to colour series by a grouping variable, and
-split into facets with `facet_by`:
+Pass a bare column name to colour series by a grouping variable, and split
+into facets with `facet_by`:
 
-``` r
+```{r facet}
 make_plot_bouquet(gw_long,
   time_col      = week,
   series_col    = station,
@@ -108,11 +118,9 @@ make_plot_bouquet(gw_long,
 )
 ```
 
-<img src="man/figures/README-facet-1.png" alt="" width="100%" />
-
 ### Dark mode with rings and step markers
 
-``` r
+```{r dark}
 make_plot_bouquet(gw_long,
   time_col      = week,
   series_col    = station,
@@ -127,15 +135,13 @@ make_plot_bouquet(gw_long,
 )
 ```
 
-<img src="man/figures/README-dark-1.png" alt="" width="100%" />
-
 ### Clustering
 
 `cluster_bouquet()` groups series by the similarity of their directional
 sequences and appends a `cluster` column that plugs directly into
 `make_plot_bouquet()`:
 
-``` r
+```{r cluster}
 set.seed(7)
 n2     <- 52L
 sea2   <- sin(seq(0, 2 * pi, length.out = n2))
@@ -173,15 +179,13 @@ gw6 |>
   )
 ```
 
-<img src="man/figures/README-cluster-1.png" alt="" width="100%" />
-
 ### Location map panel
 
-Supply coordinate columns to attach a location map alongside the
-bouquet. Any projected CRS is handled via `coord_crs`
-(e.g. `coord_crs = 3035` for ETRS89-LAEA).
+Supply coordinate columns to attach a location map alongside the bouquet.
+Any projected CRS is handled via `coord_crs` (e.g. `coord_crs = 3035` for
+ETRS89-LAEA).
 
-``` r
+```{r map, eval = requireNamespace("patchwork", quietly = TRUE) && requireNamespace("maps", quietly = TRUE)}
 gw_coords <- dplyr::mutate(gw_long,
   lon = c(rep(9.9, n), rep(13.4, n), rep(8.7, n)),
   lat = c(rep(51.5, n), rep(52.5, n), rep(50.1, n))
@@ -198,19 +202,17 @@ make_plot_bouquet(gw_coords,
 )
 ```
 
-<img src="man/figures/README-map-1.png" alt="" width="100%" />
-
-------------------------------------------------------------------------
+---
 
 ## How it works
 
-For each series, the signed first difference is binarised to +1
-(increase), −1 (decrease), or 0 (no change). The heading at step *i* is:
+For each series, the signed first difference is binarised to +1 (increase),
+−1 (decrease), or 0 (no change). The heading at step *i* is:
 
 $$h_i = h_{\text{launch}} + \sum_{k=2}^{i} d_k \cdot \theta$$
 
-The angle θ is derived so that even the most volatile series in the
-dataset never completes a full loop:
+The angle θ is derived so that even the most volatile series in the dataset
+never completes a full loop:
 
 $$\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times \texttt{ceiling\_pct}$$
 
@@ -218,21 +220,23 @@ where *C*ₛ is the cumulative sum of signed steps for series *s*. All
 coordinates follow as a vectorised `cumsum(cos(heading))` /
 `cumsum(sin(heading))`.
 
-------------------------------------------------------------------------
+---
 
 ## Citation
 
 If you use bouquets in a publication, please cite it as:
 
-    Last, F. (2025). bouquets: Angular accumulation plots for time series.
-    R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
+```
+Last, F. (2025). bouquets: Angular accumulation plots for time series.
+R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
+```
 
-------------------------------------------------------------------------
+---
 
 ## References
 
-Gates, M. A. (1986). A simple way to look at DNA. *Journal of
-Theoretical Biology*, 119(3), 319–328.
+Gates, M. A. (1986). A simple way to look at DNA. *Journal of Theoretical
+Biology*, 119(3), 319–328.
 
-Yau, S. S.-T., et al. (2003). DNA sequence representation without
-degeneracy. *Nucleic Acids Research*, 31(12), 3078–3080.
+Yau, S. S.-T., et al. (2003). DNA sequence representation without degeneracy.
+*Nucleic Acids Research*, 31(12), 3078–3080.
