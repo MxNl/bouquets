@@ -130,7 +130,7 @@
 
 #' Build bouquet turtle-paths from a long-format data frame
 #'
-#' Shared core used by [make_plot_bouquet()] and [make_plot_bouquet_geofacet()].
+#' Shared core used by [make_plot_bouquet()].
 #' Returns a list with all derived objects needed for plotting.
 #'
 #' @param data            Long-format data frame.
@@ -419,8 +419,9 @@
 #' @importFrom rlang as_name enquo eval_tidy quo_is_null quo_is_symbol
 #'   quo_is_symbolic
 #' @importFrom ggplot2 aes annotate coord_equal element_blank element_rect
-#'   element_text facet_wrap geom_path geom_point geom_text ggplot I labs
-#'   margin scale_color_manual scale_fill_manual theme theme_void unit vars
+#'   element_text facet_wrap geom_path geom_point geom_text ggplot labs
+#'   margin scale_color_identity scale_color_manual scale_fill_manual theme
+#'   theme_void unit vars
 #' @importFrom ggforce geom_circle
 #' @importFrom hues iwanthue
 #' @importFrom stats median setNames

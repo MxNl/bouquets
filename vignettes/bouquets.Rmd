@@ -357,17 +357,6 @@ make_plot_bouquet(gw_coords,
   map_width  = 0.35,
   verbose    = FALSE
 )
-
-# For ETRS89-LAEA coordinates (EPSG:3035):
-make_plot_bouquet(gw_coords_projected,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  lon_col    = easting,
-  lat_col    = northing,
-  coord_crs  = 3035,
-  verbose    = FALSE
-)
 ```
 
 `map_width` controls the relative width of the map panel (default `0.35` =

@@ -178,7 +178,8 @@
 #'
 #' @importFrom dplyr all_of case_when filter group_by left_join mutate rename
 #'   row_number select ungroup .data
-#' @importFrom stats cor cutree dist hclust kmeans prcomp setNames
+#' @importFrom rlang ':='
+#' @importFrom stats as.dist cor cutree dist hclust kmeans prcomp setNames
 #' @importFrom tibble tibble
 cluster_bouquet <- function(
     data,

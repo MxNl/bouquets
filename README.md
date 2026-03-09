@@ -1,7 +1,7 @@
 # bouquets <img src="man/figures/logo.png" align="right" height="139" alt="" />
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/yourusername/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/yourusername/bouquets/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 <!-- badges: end -->
@@ -12,8 +12,6 @@ on increases and **right** on decreases — all series share the same origin
 and turning angle, so paths that look alike come from series with similar
 directional dynamics, regardless of their absolute values.
 
-The technique is structurally related to DNA walk visualisations (Gates 1986;
-Yau et al. 2003).
 
 ---
 
@@ -22,7 +20,7 @@ Yau et al. 2003).
 ```r
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("yourusername/bouquets")
+remotes::install_github("MxNl/bouquets")
 ```
 
 Optional dependencies that unlock extra features:
@@ -183,7 +181,7 @@ If you use bouquets in a publication, please cite it as:
 
 ```
 Last, F. (2025). bouquets: Angular accumulation plots for time series.
-R package version 0.1.0. https://github.com/yourusername/bouquets
+R package version 0.1.0. https://github.com/MxNl/bouquets
 ```
 
 ---
