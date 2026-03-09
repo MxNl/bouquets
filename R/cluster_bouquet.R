@@ -164,6 +164,7 @@
 #' )
 #'
 #' # Visualise — colour and facet by cluster
+#' \donttest{
 #' make_plot_bouquet(clustered,
 #'   time_col      = week,
 #'   series_col    = station,
@@ -173,6 +174,7 @@
 #'   facet_by      = cluster,
 #'   title         = "Groundwater Stations by Directional Cluster"
 #' )
+#' }
 #'
 #' @export
 #'

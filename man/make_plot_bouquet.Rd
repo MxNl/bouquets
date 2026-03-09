@@ -183,6 +183,7 @@ even though neither extreme alone reaches 25.
 }
 }
 \examples{
+\donttest{
 set.seed(42)
 n      <- 52
 weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
@@ -214,6 +215,7 @@ make_plot_bouquet(
   facet_by      = region,
   title         = "Groundwater Level Fluctuations \u2014 2023"
 )
+}
 
 }
 \seealso{

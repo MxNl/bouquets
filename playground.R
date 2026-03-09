@@ -101,6 +101,9 @@ data_gems |>
     title = "Groundwater levels in Germany",
     flower_color = "blossom",
     stem_colors = "greens"
+  ) +
+  theme(
+    subtitle.text = element_text(size = 25)
   )
 
 data_gems |> 

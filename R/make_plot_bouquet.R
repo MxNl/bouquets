@@ -380,6 +380,7 @@
 #' paths using similar binary-direction rules.
 #'
 #' @examples
+#' \donttest{
 #' set.seed(42)
 #' n      <- 52
 #' weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
@@ -411,6 +412,7 @@
 #'   facet_by      = region,
 #'   title         = "Groundwater Level Fluctuations \u2014 2023"
 #' )
+#' }
 #'
 #' @export
 #' @importFrom dplyr all_of case_when filter group_by group_modify mutate
@@ -601,17 +603,18 @@ make_plot_bouquet <- function(
       n_series, " series  \u00b7  ",
       n_steps, " ", .format_interval(time_vals), " observations",
       "  \u00b7  ",
-      .format_endpoint(min(time_vals, na.rm = TRUE)), " (start)",
+      .format_endpoint(min(time_vals, na.rm = TRUE)), " \u25cb",
       " \u2013 ",
-      .format_endpoint(max(time_vals, na.rm = TRUE)), " (end)"
+      .format_endpoint(max(time_vals, na.rm = TRUE)), " \u273f"
     )
     subtitle <- paste0(
       time_sentence, "\n",
       "Angular Accumulation Plot  \u00b7  ",
-      "theta = ", round(theta_deg, 1L), "\u00b0",
+      "\u03b8 = ", round(theta_deg, 1L), "\u00b0",
       "  (binding: ", binding_series,
       ", sweep = ", max_sweep, " steps)\n",
-      "left = increase  |  right = decrease  |  straight = no change"
+      "\u21ba\u00a0increase  |  \u21bb\u00a0decrease",
+      "  |  straight\u00a0=\u00a0no change"
     )
   }
 
@@ -696,9 +699,10 @@ make_plot_bouquet <- function(
   }
 
   # ── Caption ────────────────────────────────────────────────────────────────
-  caption <- "flower = last step  \u00b7  o = origin"
+  caption <- "\u273f\u00a0= last step  \u00b7  \u25cb\u00a0= origin"
   if (!is.null(marker_every)) {
-    caption <- paste0(caption, "  \u00b7  dot = every ", marker_every, " steps")
+    caption <- paste0(caption,
+                      "  \u00b7  \u25cf\u00a0= every ", marker_every, " steps")
   }
 
   # ── Theme ──────────────────────────────────────────────────────────────────
