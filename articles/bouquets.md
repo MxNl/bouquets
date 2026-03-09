@@ -24,13 +24,19 @@ weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
 season <- sin(seq(0, 2 * pi, length.out = n))
 
 gw_long <- tibble::tibble(
-  week    = rep(weeks, 3L),
-  station = rep(c("Station A", "Station B", "Station C"), each = n),
-  region  = rep(c("North", "North", "South"), each = n),
+  week    = rep(weeks, 8L),
+  station = rep(paste0("Station ", LETTERS[1:8]), each = n),
+  region  = rep(c("North", "North", "North", "North",
+                  "South", "South", "South", "South"), each = n),
   level_m = c(
     8.5 + 0.8 * season + cumsum(rnorm(n,  0.00, 0.18)),
     7.2 + 0.5 * season + cumsum(rnorm(n,  0.02, 0.22)),
-    9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15))
+    9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15)),
+    6.8 + 0.9 * season + cumsum(rnorm(n,  0.01, 0.20)),
+    5.4 + 1.2 * season + cumsum(rnorm(n, -0.02, 0.17)),
+    7.7 + 0.6 * season + cumsum(rnorm(n,  0.00, 0.21)),
+    8.9 + 0.7 * season + cumsum(rnorm(n,  0.01, 0.19)),
+    6.2 + 1.0 * season + cumsum(rnorm(n, -0.01, 0.16))
   )
 )
 
@@ -97,6 +103,7 @@ make_plot_bouquet(gw_long,
   stem_colors   = c("#c0392b", "#2980b9", "#27ae60"),
   verbose       = FALSE
 )
+#> Warning: Fewer `stem_colors` supplied than series; recycling.
 ```
 
 ![](bouquets_files/figure-html/vector-1.png)
@@ -389,10 +396,10 @@ Coordinates in WGS84 decimal degrees work directly. For projected
 coordinates supply the EPSG code via `coord_crs`:
 
 ``` r
-# Example with decimal-degree coordinates
+# Stations spread across Germany north to south, coast to border
 gw_coords <- dplyr::mutate(gw_long,
-  lon = c(rep(9.9, n), rep(13.4, n), rep(8.7, n)),
-  lat = c(rep(51.5, n), rep(52.5, n), rep(50.1, n))
+  lon = rep(c(6.9, 13.4, 9.9, 12.1, 7.5, 11.2, 8.7, 14.8), each = n),
+  lat = rep(c(53.6, 52.5, 51.5, 48.1, 51.2, 49.8, 47.8, 50.9), each = n)
 )
 
 make_plot_bouquet(gw_coords,
