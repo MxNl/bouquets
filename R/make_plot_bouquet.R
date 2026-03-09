@@ -679,7 +679,7 @@ make_plot_bouquet <- function(
                                label  = "\u273f",
                                color  = I(.data$flower_col)),
     inherit.aes = FALSE,
-    size        = 7, family = "sans", show.legend = FALSE
+    size        = 5.5, family = "sans", show.legend = FALSE
   )
 
   # Colour and fill scales
@@ -726,7 +726,7 @@ make_plot_bouquet <- function(
         hjust = 0.5, margin = ggplot2::margin(b = 6)
       ),
       plot.subtitle     = ggplot2::element_text(
-        color = subtext_col, size = 12,
+        color = subtext_col, size = 9,
         hjust = 0.5, margin = ggplot2::margin(b = 14)
       ),
       plot.caption      = ggplot2::element_text(
