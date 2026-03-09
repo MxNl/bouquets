@@ -7,6 +7,7 @@
 [![R-CMD-check](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![pkgdown](https://github.com/YOU/bouquets/actions/workflows/pkgdown.yaml/badge.svg)](https://YOU.github.io/bouquets/)
 <!-- badges: end -->
 
 **bouquets** creates angular accumulation plots for collections of time

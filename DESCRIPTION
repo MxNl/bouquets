@@ -34,5 +34,5 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/MxNl/bouquets
+URL: https://github.com/MxNl/bouquets, https://mxnl.github.io/bouquets/
 BugReports: https://github.com/MxNl/bouquets/issues
