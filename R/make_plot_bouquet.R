@@ -601,18 +601,17 @@ make_plot_bouquet <- function(
       n_series, " series  \u00b7  ",
       n_steps, " ", .format_interval(time_vals), " observations",
       "  \u00b7  ",
-      .format_endpoint(min(time_vals, na.rm = TRUE)), " \u25cb",
+      .format_endpoint(min(time_vals, na.rm = TRUE)), " (start)",
       " \u2013 ",
-      .format_endpoint(max(time_vals, na.rm = TRUE)), " \u273f"
+      .format_endpoint(max(time_vals, na.rm = TRUE)), " (end)"
     )
     subtitle <- paste0(
       time_sentence, "\n",
       "Angular Accumulation Plot  \u00b7  ",
-      "\u03b8 = ", round(theta_deg, 1L), "\u00b0",
+      "theta = ", round(theta_deg, 1L), "\u00b0",
       "  (binding: ", binding_series,
       ", sweep = ", max_sweep, " steps)\n",
-      "\u21ba\u00a0increase  |  \u21bb\u00a0decrease",
-      "  |  straight\u00a0=\u00a0no change"
+      "left = increase  |  right = decrease  |  straight = no change"
     )
   }
 
@@ -697,10 +696,9 @@ make_plot_bouquet <- function(
   }
 
   # ── Caption ────────────────────────────────────────────────────────────────
-  caption <- "\u273f\u00a0= last step  \u00b7  \u25cb\u00a0= origin"
+  caption <- "flower = last step  \u00b7  o = origin"
   if (!is.null(marker_every)) {
-    caption <- paste0(caption,
-                      "  \u00b7  \u25cf\u00a0= every ", marker_every, " steps")
+    caption <- paste0(caption, "  \u00b7  dot = every ", marker_every, " steps")
   }
 
   # ── Theme ──────────────────────────────────────────────────────────────────
