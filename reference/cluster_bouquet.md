@@ -297,6 +297,7 @@ clustered_fine <- cluster_bouquet(gw_long,
 #> 
 
 # Visualise — colour and facet by cluster
+# \donttest{
 make_plot_bouquet(clustered,
   time_col      = week,
   series_col    = station,
@@ -322,4 +323,5 @@ make_plot_bouquet(clustered,
 #> theta (80%)  : 16.00°
 #> 
 
+# }
 ```

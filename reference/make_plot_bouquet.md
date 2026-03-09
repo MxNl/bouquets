@@ -239,6 +239,7 @@ paths using similar binary-direction rules.
 ## Examples
 
 ``` r
+# \donttest{
 set.seed(42)
 n      <- 52
 weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
@@ -296,4 +297,5 @@ make_plot_bouquet(
 #> theta (80%)  : 11.08°
 #> 
 
+# }
 ```
