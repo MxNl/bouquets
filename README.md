@@ -5,8 +5,8 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/R-CMD-check.yaml)
-[![pkgdown](https://github.com/YOUR_GITHUB_USERNAME/bouquets/actions/workflows/pkgdown.yaml/badge.svg)](https://YOUR_GITHUB_USERNAME.github.io/bouquets/)
+[![R-CMD-check](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/MxNl/bouquets/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/MxNl/bouquets/actions/workflows/pkgdown.yaml/badge.svg)](https://MxNl.github.io/bouquets/)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: CC BY
@@ -29,7 +29,7 @@ The technique is structurally related to DNA walk visualisations (Gates
 ``` r
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
+remotes::install_github("MxNl/bouquets")
 ```
 
 Optional dependencies that unlock extra features:
@@ -225,7 +225,7 @@ coordinates follow as a vectorised `cumsum(cos(heading))` /
 If you use bouquets in a publication, please cite it as:
 
     Last, F. (2025). bouquets: Angular accumulation plots for time series.
-    R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
+    R package version 0.1.0. https://github.com/MxNl/bouquets
 
 ------------------------------------------------------------------------
 
