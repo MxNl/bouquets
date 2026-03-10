@@ -257,7 +257,7 @@ coordinates follow as a vectorised `cumsum(cos(heading))` /
 If you use bouquets in a publication, please cite it as:
 
 ```
-Last, F. (2025). bouquets: Angular accumulation plots for time series.
+Nölscher, M. (2025). bouquets: Angular accumulation plots for time series.
 R package version 0.1.0. https://github.com/MxNl/bouquets
 ```
 
