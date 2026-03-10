@@ -3,11 +3,19 @@
 (\(+1\) increase, \(-1\) decrease, \(0\) no change) and clusters
 the series based on the similarity of those sequences. The resulting
 cluster column can be passed directly to make_plot_bouquet() via
-stem_colors, flower_colors, or facet_by."><meta property="og:description" content="Encodes each time series as a sequence of signed directional steps
+stem_colors, flower_colors, facet_by, or cluster_hull.
+The returned object is both the original data tibble (with an added
+cluster column) and a cluster_bouquet S3 object. Call
+summary.cluster_bouquet() on it to print a structured report of cluster
+quality, sizes, and member series."><meta property="og:description" content="Encodes each time series as a sequence of signed directional steps
 (\(+1\) increase, \(-1\) decrease, \(0\) no change) and clusters
 the series based on the similarity of those sequences. The resulting
 cluster column can be passed directly to make_plot_bouquet() via
-stem_colors, flower_colors, or facet_by."></head><body>
+stem_colors, flower_colors, facet_by, or cluster_hull.
+The returned object is both the original data tibble (with an added
+cluster column) and a cluster_bouquet S3 object. Call
+summary.cluster_bouquet() on it to print a structured report of cluster
+quality, sizes, and member series."><meta property="og:image" content="https://mxnl.github.io/bouquets/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -35,8 +43,7 @@ stem_colors, flower_colors, or facet_by."></head><body>
 </nav><div class="container template-reference-topic">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Cluster Time Series by Directional Dynamics</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Cluster Time Series by Directional Dynamics</h1>
       <small class="dont-index">Source: <a href="https://github.com/MxNl/bouquets/blob/main/R/cluster_bouquet.R" class="external-link"><code>R/cluster_bouquet.R</code></a></small>
       <div class="d-none name"><code>cluster_bouquet.Rd</code></div>
     </div>
@@ -46,7 +53,11 @@ stem_colors, flower_colors, or facet_by."></head><body>
 (\(+1\) increase, \(-1\) decrease, \(0\) no change) and clusters
 the series based on the similarity of those sequences. The resulting
 <code>cluster</code> column can be passed directly to <code><a href="make_plot_bouquet.html">make_plot_bouquet()</a></code> via
-<code>stem_colors</code>, <code>flower_colors</code>, or <code>facet_by</code>.</p>
+<code>stem_colors</code>, <code>flower_colors</code>, <code>facet_by</code>, or <code>cluster_hull</code>.</p>
+<p>The returned object is both the original <code>data</code> tibble (with an added
+cluster column) <strong>and</strong> a <code>cluster_bouquet</code> S3 object. Call
+<code><a href="summary.cluster_bouquet.html">summary.cluster_bouquet()</a></code> on it to print a structured report of cluster
+quality, sizes, and member series.</p>
     </div>
 
     <div class="section level2">
@@ -63,7 +74,8 @@ the series based on the similarity of those sequences. The resulting
 <span>  resolution <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  pca_variance <span class="op">=</span> <span class="fl">0.9</span>,</span>
 <span>  cluster_col <span class="op">=</span> <span class="st">"cluster"</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -72,7 +84,7 @@ the series based on the similarity of those sequences. The resulting
 
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
-<dd><p>A long-format data frame or tibble — the same format expected
+<dd><p>A long-format data frame or tibble – the same format expected
 by <code><a href="make_plot_bouquet.html">make_plot_bouquet()</a></code>.</p></dd>
 
 
@@ -94,104 +106,82 @@ value column. Defaults to the third column.</p></dd>
 <dt id="arg-k">k<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>
 <dd><p>Either a positive integer specifying the number of clusters, or
 <code>"auto"</code> (default) to select the optimal number by maximising the
-composite silhouette score across <code>k = 2, …, k_max</code>.</p></dd>
+composite silhouette score across <code>k = 2, ..., k_max</code>.</p></dd>
 
 
 <dt id="arg-k-max">k_max<a class="anchor" aria-label="anchor" href="#arg-k-max"></a></dt>
-<dd><p>A single positive integer. The upper bound considered when
-<code>k = "auto"</code>. Capped internally at <code>n_series - 1</code>. Defaults to <code>8L</code>.</p></dd>
+<dd><p>A single positive integer. Upper bound considered when
+<code>k = "auto"</code>. Capped at <code>n_series - 1</code>. Defaults to <code>8L</code>.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>The clustering algorithm. One of:</p><dl><dt><code>"pca_hclust"</code></dt>
-<dd><p>(Default) Projects direction sequences onto their
-principal components retaining <code>pca_variance</code> of variance, then
-applies agglomerative hierarchical clustering with Ward's D2 linkage
-in that space. The PCA step removes noise dimensions that dilute
-cluster separation in long series. Deterministic; no extra packages
-required. The <code>distance</code> argument does not apply — distance is always
-Euclidean in PCA space.</p></dd>
+<dd><p>(Default) PCA projection followed by agglomerative
+hierarchical clustering with Ward's D2. Deterministic; no extra
+packages required. The <code>distance</code> argument does not apply.</p></dd>
 
 <dt><code>"pca_kmeans"</code></dt>
-<dd><p>PCA projection followed by k-means. Faster for
-large numbers of series; non-deterministic (set a seed for
-reproducibility). The <code>distance</code> argument does not apply.</p></dd>
+<dd><p>PCA projection followed by k-means. Set <code>seed</code>
+for reproducibility. The <code>distance</code> argument does not apply.</p></dd>
 
 <dt><code>"hclust"</code></dt>
-<dd><p>Hierarchical clustering with Ward's D2 directly on
-the direction sequences, using the <code>distance</code> metric. Best for short
-series (&lt; ~50 steps) where the raw sequence distance is meaningful.</p></dd>
+<dd><p>Ward's D2 hierarchical clustering directly on the
+direction sequences using the <code>distance</code> metric. Best for short series.</p></dd>
 
 <dt><code>"kmeans"</code></dt>
-<dd><p>k-means directly on the direction sequences. The
-<code>distance</code> argument does not apply (k-means always uses Euclidean
-internally). Suitable for short series with many observations.</p></dd>
+<dd><p>k-means on the direction sequences. Always uses
+Euclidean distance internally. Set <code>seed</code> for reproducibility.</p></dd>
 
 <dt><code>"pam"</code></dt>
-<dd><p>Partitioning Around Medoids using the <code>distance</code> metric.
-More robust to outlier series than k-means because cluster centres are
-always real observations. Requires the <span class="pkg">cluster</span> package.</p></dd>
+<dd><p>Partitioning Around Medoids. More robust to outliers.
+Requires the <span class="pkg">cluster</span> package.</p></dd>
 
 
 </dl></dd>
 
 
 <dt id="arg-distance">distance<a class="anchor" aria-label="anchor" href="#arg-distance"></a></dt>
-<dd><p>The distance metric applied to the raw direction sequences.
-One of:</p><dl><dt><code>"euclidean"</code></dt>
-<dd><p>(Default) Penalises step-by-step disagreements
-between sequences.</p></dd>
-
-<dt><code>"correlation"</code></dt>
-<dd><p>Converts Pearson correlation to a distance as
-\(1 - r\), measuring whether series <em>co-move</em> in their ups and
-downs regardless of their absolute patterns. Often the most
-meaningful metric for hydrological series.</p></dd>
-
-<dt><code>"manhattan"</code></dt>
-<dd><p>Sum of absolute step differences. Less sensitive
-to occasional large divergences than Euclidean.</p></dd>
-
-
-</dl><p><strong>Note</strong>: only applied by <code>"hclust"</code> and <code>"pam"</code>. The PCA methods
-always use Euclidean distance in the reduced space; k-means has no
-distance argument by design.</p></dd>
+<dd><p>Distance metric for <code>"hclust"</code> and <code>"pam"</code>. One of
+<code>"euclidean"</code> (default), <code>"correlation"</code> (\(1 - r\)), or <code>"manhattan"</code>.
+Not used by PCA methods or <code>"kmeans"</code>.</p></dd>
 
 
 <dt id="arg-resolution">resolution<a class="anchor" aria-label="anchor" href="#arg-resolution"></a></dt>
-<dd><p>A non-negative number controlling the preference for
-more vs fewer clusters during automatic k selection. The composite score
-is:</p>
-<p>$$\text{score}(k) = \bar{s}(k) \times \min_c \bar{s}_c(k) \times
-  k^{\text{resolution}}$$</p>
-<p>where \(\bar{s}(k)\) is the overall mean silhouette width and
-\(\min_c \bar{s}_c(k)\) is the mean silhouette of the <em>worst</em> cluster.
-Increasing <code>resolution</code> rewards finer groupings as long as all clusters
-remain well-defined. <code>resolution = 0</code> falls back to plain mean
-silhouette. Defaults to <code>0.5</code>.</p></dd>
+<dd><p>A non-negative number. Composite k-selection score:
+\(\bar{s}(k) \times \min_c \bar{s}_c(k) \times k^{\text{resolution}}\).
+Higher values favour finer clusters. <code>0</code> = plain mean silhouette.
+Default <code>0.5</code>.</p></dd>
 
 
 <dt id="arg-pca-variance">pca_variance<a class="anchor" aria-label="anchor" href="#arg-pca-variance"></a></dt>
-<dd><p>A number in <code>(0, 1]</code>. The cumulative proportion of
-variance to retain during PCA compression. Only used by <code>"pca_hclust"</code>
-and <code>"pca_kmeans"</code>. Defaults to <code>0.90</code>.</p></dd>
+<dd><p>Cumulative variance retained during PCA. Only used by
+<code>"pca_hclust"</code> and <code>"pca_kmeans"</code>. Default <code>0.90</code>.</p></dd>
 
 
 <dt id="arg-cluster-col">cluster_col<a class="anchor" aria-label="anchor" href="#arg-cluster-col"></a></dt>
-<dd><p>A string. The name of the column added to <code>data</code>.
-Defaults to <code>"cluster"</code>.</p></dd>
+<dd><p>String. Name of the cluster column added to <code>data</code>.
+Default <code>"cluster"</code>.</p></dd>
+
+
+<dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
+<dd><p>Integer or <code>NULL</code>. Random seed passed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">base::set.seed()</a></code>
+before k-means initialisation. Ensures reproducible results for
+<code>"pca_kmeans"</code> and <code>"kmeans"</code>. <code>NULL</code> = no seed (non-reproducible).
+Default <code>42L</code>.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
-<dd><p>Logical. Whether to print the k selection table, chosen k,
-mean silhouette, and cluster sizes. Defaults to <code>TRUE</code>.</p></dd>
+<dd><p>Logical. Print k selection table, chosen k, silhouette score,
+and cluster sizes. Default <code>FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>The original <code>data</code> tibble with one additional factor column named
-by <code>cluster_col</code>. Levels are <code>"C1"</code>, <code>"C2"</code>, … ordered by decreasing
-cluster size.</p>
+    <p>The original <code>data</code> tibble with one additional factor column (named
+by <code>cluster_col</code>, levels <code>"C1"</code>, <code>"C2"</code>, ... ordered by decreasing size)
+plus a <code>cluster_bouquet</code> S3 class. The object also carries a <code>bq_meta</code>
+attribute containing all clustering diagnostics; use
+<code><a href="summary.cluster_bouquet.html">summary.cluster_bouquet()</a></code> to print them.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -201,33 +191,16 @@ cluster size.</p>
 
 
 <p>Each series of length \(n\) is represented as a vector of \(n - 1\)
-signed steps \(d_i \in \{-1, 0, +1\}\). These form the rows of a
-feature matrix \(M \in \mathbb{R}^{n_\text{series} \times (n-1)}\).</p>
+signed steps \(d_i \in \{-1, 0, +1\}\).</p>
 </div>
 
 <div class="section">
-<h3 id="which-method-and-distance-to-choose">Which method and distance to choose<a class="anchor" aria-label="anchor" href="#which-method-and-distance-to-choose"></a></h3>
-
-
-<p>For typical hydrological series (weekly to daily, many years):</p><ul><li><p>Start with <code>"pca_hclust"</code> (default). PCA compression removes the
-noise that makes long raw sequences hard to separate.</p></li>
-<li><p>If you suspect the series differ mainly in <em>co-movement</em> rather
-than exact pattern, try <code>method = "hclust", distance = "correlation"</code>.
-This is often the most geologically meaningful choice.</p></li>
-<li><p>Use <code>"pam"</code> when you want cluster representatives to be real
-observed series that you can point to in the data.</p></li>
-</ul></div>
-
-<div class="section">
-<h3 id="composite-k-selection-score">Composite k-selection score<a class="anchor" aria-label="anchor" href="#composite-k-selection-score"></a></h3>
+<h3 id="composite-k-selection">Composite k-selection<a class="anchor" aria-label="anchor" href="#composite-k-selection"></a></h3>
 
 
 <p>Plain mean silhouette consistently selects k = 2 because two large blobs
-almost always score well globally even when finer structure exists. The
-composite score adds two corrections: the worst-cluster term
-\(\min_c \bar{s}_c(k)\) kills solutions where one cluster is
-ill-defined, and the resolution exponent \(k^\text{resolution}\) rewards
-cleaner solutions at higher k.</p>
+score globally well even when finer structure exists. The composite score
+adds a worst-cluster penalty and a resolution exponent.</p>
 </div>
 
 <div class="section">
@@ -237,19 +210,18 @@ cleaner solutions at higher k.</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="va">data</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span>time_col <span class="op">=</span> <span class="va">date</span>, series_col <span class="op">=</span> <span class="va">id</span>, value_col <span class="op">=</span> <span class="va">gwl</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
-<span>    time_col      <span class="op">=</span> <span class="va">date</span>,</span>
-<span>    series_col    <span class="op">=</span> <span class="va">id</span>,</span>
-<span>    value_col     <span class="op">=</span> <span class="va">gwl</span>,</span>
-<span>    stem_colors   <span class="op">=</span> <span class="va">cluster</span>,</span>
-<span>    flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span>
-<span>    facet_by      <span class="op">=</span> <span class="va">cluster</span></span>
+<span>    time_col      <span class="op">=</span> <span class="va">date</span>,   series_col    <span class="op">=</span> <span class="va">id</span>,   value_col <span class="op">=</span> <span class="va">gwl</span>,</span>
+<span>    stem_colors   <span class="op">=</span> <span class="va">cluster</span>, flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span>
+<span>    lon_col <span class="op">=</span> <span class="va">lon</span>, lat_col <span class="op">=</span> <span class="va">lat</span>, cluster_hull <span class="op">=</span> <span class="va">cluster</span></span>
 <span>  <span class="op">)</span></span></code></pre><p></p></div>
 </div>
 
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="make_plot_bouquet.html">make_plot_bouquet()</a></code> for visualising the result.</p></div>
+    <div class="dont-index"><p><code><a href="make_plot_bouquet.html">make_plot_bouquet()</a></code> for visualising the result.
+<code><a href="summary.cluster_bouquet.html">summary.cluster_bouquet()</a></code> for a structured quality report.
+<code><a href="plot_cluster_quality.html">plot_cluster_quality()</a></code> to plot silhouette scores across k.</p></div>
     </div>
 
     <div class="section level2">
@@ -275,97 +247,44 @@ cleaner solutions at higher k.</p>
 <span class="r-in"><span><span class="co"># Default: PCA + hclust, auto k</span></span></span>
 <span class="r-in"><span><span class="va">clustered</span> <span class="op">&lt;-</span> <span class="fu">cluster_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
 <span class="r-in"><span>  time_col <span class="op">=</span> <span class="va">week</span>, series_col <span class="op">=</span> <span class="va">station</span>, value_col <span class="op">=</span> <span class="va">level_m</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> PCA: retaining 5 / 51 components (100% variance explained)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Auto k selection (composite silhouette score):</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 2 : 0.0063</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 3 : 0.0011</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 4 : 0.0533 &lt;-- selected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 5 : 0.0302</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> cluster_bouquet  |  method = pca_hclust  |  distance = euclidean (unused)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> k = 4  |  mean silhouette = 0.053  |  resolution = 0.50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cluster sizes:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C1 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C2 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C3 : 1 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C4 : 1 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Correlation distance with hclust — often best for hydrological series</span></span></span>
-<span class="r-in"><span><span class="va">clustered_corr</span> <span class="op">&lt;-</span> <span class="fu">cluster_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
-<span class="r-in"><span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span></span>
-<span class="r-in"><span>  series_col <span class="op">=</span> <span class="va">station</span>,</span></span>
-<span class="r-in"><span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span></span>
-<span class="r-in"><span>  method     <span class="op">=</span> <span class="st">"hclust"</span>,</span></span>
-<span class="r-in"><span>  distance   <span class="op">=</span> <span class="st">"correlation"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Inspect the result</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">clustered</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -- cluster_bouquet summary ----------------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Method    : pca_hclust</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Distance  : euclidean (unused)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Seed      : 42</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Series    : 6   k = 4   Resolution = 0.50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean silhouette : 0.053  (weak structure -- consider more data or fewer clusters)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Auto k selection (composite silhouette score):</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 2 : 0.0272</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 3 : 0.0040</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 4 : 0.1164 &lt;-- selected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 5 : 0.0719</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Auto k selection (composite silhouette score):</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 2 : 0.0063</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 3 : 0.0011</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 4 : 0.0533  &lt;-- selected</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 5 : 0.0302</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> cluster_bouquet  |  method = hclust  |  distance = correlation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> k = 4  |  mean silhouette = 0.116  |  resolution = 0.50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cluster sizes:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C1 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C2 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C3 : 1 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C4 : 1 series</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cluster sizes and members:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C1  (2 series, mean sil = 0.069)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        S1, S4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C2  (2 series, mean sil = 0.090)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        S3, S6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C3  (1 series, mean sil = 0.000)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        S2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C4  (1 series, mean sil = 0.000)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        S5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Per-series silhouette widths:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S1                    C1   0.074  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S4                    C1   0.065  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S3                    C2   0.110  ||</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S6                    C2   0.071  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S2                    C3   0.000  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S5                    C4   0.000  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------------------------------------------</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Increase resolution to push toward finer, cleaner clusters</span></span></span>
-<span class="r-in"><span><span class="va">clustered_fine</span> <span class="op">&lt;-</span> <span class="fu">cluster_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
-<span class="r-in"><span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span></span>
-<span class="r-in"><span>  series_col <span class="op">=</span> <span class="va">station</span>,</span></span>
-<span class="r-in"><span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span></span>
-<span class="r-in"><span>  resolution <span class="op">=</span> <span class="fl">1.5</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> PCA: retaining 5 / 51 components (100% variance explained)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Auto k selection (composite silhouette score):</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 2 : 0.0126</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 3 : 0.0033</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 4 : 0.0533 &lt;-- selected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   k = 5 : 0.0302</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> cluster_bouquet  |  method = pca_hclust  |  distance = euclidean (unused)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> k = 4  |  mean silhouette = 0.053  |  resolution = 1.50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cluster sizes:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C1 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C2 : 2 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C3 : 1 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   C4 : 1 series</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Visualise — colour and facet by cluster</span></span></span>
+<span class="r-in"><span><span class="co"># Plot silhouette scores across k to inspect the elbow</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">clustered</span>,</span></span>
-<span class="r-in"><span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span></span>
-<span class="r-in"><span>  series_col    <span class="op">=</span> <span class="va">station</span>,</span></span>
-<span class="r-in"><span>  value_col     <span class="op">=</span> <span class="va">level_m</span>,</span></span>
-<span class="r-in"><span>  stem_colors   <span class="op">=</span> <span class="va">cluster</span>,</span></span>
-<span class="r-in"><span>  flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span></span>
-<span class="r-in"><span>  facet_by      <span class="op">=</span> <span class="va">cluster</span>,</span></span>
-<span class="r-in"><span>  title         <span class="op">=</span> <span class="st">"Groundwater Stations by Directional Cluster"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> === Heading sweep per series (max - min of cumulative net steps) ===</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   bq_s  cum_net_range</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> S1               11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> S2               10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> S3               18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> S4                8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> S5               11</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> S6               14</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Binding series : S3 (sweep = 18 steps)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Ceiling angle  : 20.00°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> theta (80%)  : 16.00°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu"><a href="plot_cluster_quality.html">plot_cluster_quality</a></span><span class="op">(</span><span class="va">clustered</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="cluster_bouquet-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>

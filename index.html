@@ -11,8 +11,9 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Angular Accumulation Plots for Time Series">
-<meta name="description" content='Creates angular accumulation ("bouquet") plots for collections of time series. Each series is encoded as a sequence of signed directional steps and drawn as a turtle-graphics path that turns left on increases and right on decreases. All series share a common origin and angle, so visual pattern similarity directly reflects similarity in directional dynamics. Companion functions cluster series by directional similarity and optionally attach a geographic location map to the plot.'>
-<meta property="og:description" content='Creates angular accumulation ("bouquet") plots for collections of time series. Each series is encoded as a sequence of signed directional steps and drawn as a turtle-graphics path that turns left on increases and right on decreases. All series share a common origin and angle, so visual pattern similarity directly reflects similarity in directional dynamics. Companion functions cluster series by directional similarity and optionally attach a geographic location map to the plot.'>
+<meta name="description" content='Creates angular accumulation ("bouquet") plots for collections of time series. Each series is encoded as a sequence of signed directional steps and drawn as a turtle-graphics path that turns left on increases and right on decreases. All series share a common origin and angle, so visual pattern similarity directly reflects similarity in directional dynamics. Companion functions cluster series by directional similarity (with S3 summary and quality-plot helpers), highlight individual series, filter by time window, normalise per-series angles, and optionally attach a geographic location map with cluster hull overlays. An interactive plotly version with hover tooltips is also provided.'>
+<meta property="og:description" content='Creates angular accumulation ("bouquet") plots for collections of time series. Each series is encoded as a sequence of signed directional steps and drawn as a turtle-graphics path that turns left on increases and right on decreases. All series share a common origin and angle, so visual pattern similarity directly reflects similarity in directional dynamics. Companion functions cluster series by directional similarity (with S3 summary and quality-plot helpers), highlight individual series, filter by time window, normalise per-series angles, and optionally attach a geographic location map with cluster hull overlays. An interactive plotly version with hover tooltips is also provided.'>
+<meta property="og:image" content="https://mxnl.github.io/bouquets/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -47,8 +48,10 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="bouquets-">bouquets <img src="reference/figures/logo.png" align="right" height="139" alt=""><a class="anchor" aria-label="anchor" href="#bouquets-"></a>
-</h1></div>
+<div class="page-header">
+<img src="logo.svg" class="logo" alt=""><h1 id="bouquets-">bouquets <a class="anchor" aria-label="anchor" href="#bouquets-"></a>
+</h1>
+</div>
 <!-- badges: start -->
 
 <p><strong>bouquets</strong> creates angular accumulation plots for collections of time series. Each series is encoded as a turtle-graphics path that turns <strong>left</strong> on increases and <strong>right</strong> on decreases — all series share the same origin and turning angle, so paths that look alike come from series with similar directional dynamics, regardless of their absolute values.</p>
@@ -63,6 +66,10 @@
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"MxNl/bouquets"</span><span class="op">)</span></span></code></pre></div>
 <p>Optional dependencies that unlock extra features:</p>
 <table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
 <thead><tr class="header">
 <th>Package</th>
 <th>Feature</th>
@@ -83,6 +90,18 @@
 <tr class="even">
 <td><code>sf</code></td>
 <td>Reprojection of non-WGS84 coordinates</td>
+</tr>
+<tr class="odd">
+<td><code>ggforce</code></td>
+<td>Cluster hull overlays on map (<code>cluster_hull</code>)</td>
+</tr>
+<tr class="even">
+<td><code>ggblend</code></td>
+<td>Perceptual blending for hulls and points on map (<code>blend = TRUE</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>plotly</code></td>
+<td>Interactive hover-tooltip version</td>
 </tr>
 </tbody>
 </table>
@@ -118,7 +137,8 @@
 <span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
 <span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
 <span>  verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C</span></span></code></pre></div>
 <p><img src="reference/figures/README-basic-1.png" alt="" width="100%"></p>
 <hr>
 </div>
@@ -136,7 +156,8 @@
 <span>  stem_colors   <span class="op">=</span> <span class="st">"greens"</span>,</span>
 <span>  flower_colors <span class="op">=</span> <span class="st">"blossom"</span>,</span>
 <span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C</span></span></code></pre></div>
 <p><img src="reference/figures/README-keywords-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
@@ -153,7 +174,8 @@
 <span>  facet_by      <span class="op">=</span> <span class="va">region</span>,</span>
 <span>  title         <span class="op">=</span> <span class="st">"Groundwater dynamics by region"</span>,</span>
 <span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C</span></span></code></pre></div>
 <p><img src="reference/figures/README-facet-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
@@ -171,7 +193,8 @@
 <span>  dark_mode     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  title         <span class="op">=</span> <span class="st">"Groundwater — dark mode"</span>,</span>
 <span>  verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C</span></span></code></pre></div>
 <p><img src="reference/figures/README-dark-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
@@ -196,7 +219,8 @@
 <span>    facet_by      <span class="op">=</span> <span class="va">cluster</span>,</span>
 <span>    title         <span class="op">=</span> <span class="st">"Series grouped by directional dynamics"</span>,</span>
 <span>    verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<span>  <span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C</span></span></code></pre></div>
 <p><img src="reference/figures/README-cluster-1.png" alt="" width="100%"></p>
 </div>
 <div class="section level3">
@@ -218,8 +242,44 @@
 <span>  lat_col    <span class="op">=</span> <span class="va">lat</span>,</span>
 <span>  map_width  <span class="op">=</span> <span class="fl">0.38</span>,</span>
 <span>  verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C + map</span></span></code></pre></div>
 <p><img src="reference/figures/README-map-1.png" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="cluster-hulls-on-the-map">Cluster hulls on the map<a class="anchor" aria-label="anchor" href="#cluster-hulls-on-the-map"></a>
+</h3>
+<p>Pass the cluster column to <code>cluster_hull</code> to draw colour-matched concave hulls around each cluster’s locations. Hull fill colour automatically matches the cluster’s <code>flower_colors</code>. Use <code>hull_coverage</code> (default <code>1</code>) to focus the hull on the core of each cluster and reduce overlap when clusters are dense:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span></span>
+<span><span class="va">gw_coords</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span><span class="va">gw_long</span>,</span>
+<span>  lon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6.9</span>, <span class="fl">13.4</span>, <span class="fl">9.9</span>, <span class="fl">12.1</span>, <span class="fl">7.5</span>, <span class="fl">11.2</span>, <span class="fl">8.7</span>, <span class="fl">14.8</span><span class="op">)</span>, each <span class="op">=</span> <span class="va">n</span><span class="op">)</span>,</span>
+<span>  lat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">53.6</span>, <span class="fl">52.5</span>, <span class="fl">51.5</span>, <span class="fl">48.1</span>, <span class="fl">51.2</span>, <span class="fl">49.8</span>, <span class="fl">47.8</span>, <span class="fl">50.9</span><span class="op">)</span>, each <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gw_coords</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
+<span>    time_col   <span class="op">=</span> <span class="va">week</span>,</span>
+<span>    series_col <span class="op">=</span> <span class="va">station</span>,</span>
+<span>    value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>    verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
+<span>    time_col      <span class="op">=</span> <span class="va">week</span>,</span>
+<span>    series_col    <span class="op">=</span> <span class="va">station</span>,</span>
+<span>    value_col     <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>    stem_colors   <span class="op">=</span> <span class="va">cluster</span>,</span>
+<span>    flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span>
+<span>    lon_col       <span class="op">=</span> <span class="va">lon</span>,</span>
+<span>    lat_col       <span class="op">=</span> <span class="va">lat</span>,</span>
+<span>    cluster_hull  <span class="op">=</span> <span class="va">cluster</span>,</span>
+<span>    hull_coverage <span class="op">=</span> <span class="fl">0.8</span>,        <span class="co"># focus hull on inner 80% of each cluster</span></span>
+<span>    map_width     <span class="op">=</span> <span class="fl">0.40</span>,</span>
+<span>    title         <span class="op">=</span> <span class="st">"Cluster hulls (core 80%)"</span>,</span>
+<span>    verbose       <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="co">#&gt; &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: Station C + map</span></span></code></pre></div>
+<p><img src="reference/figures/README-cluster-hull-1.png" alt="" width="100%"></p>
 <hr>
 </div>
 </div>
@@ -241,8 +301,8 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use bouquets in a publication, please cite it as:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>Last, <span class="fu">F.</span> (<span class="dv">2025</span>). bouquets<span class="sc">:</span> Angular accumulation plots <span class="cf">for</span> time series.</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>R package version <span class="dv">0</span>.<span class="dv">1</span>.<span class="fl">0.</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>MxNl<span class="sc">/</span>bouquets</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>Last, <span class="fu">F.</span> (<span class="dv">2025</span>). bouquets<span class="sc">:</span> Angular accumulation plots <span class="cf">for</span> time series.</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>R package version <span class="dv">0</span>.<span class="dv">1</span>.<span class="fl">0.</span> https<span class="sc">:</span><span class="er">//</span>github.com<span class="sc">/</span>MxNl<span class="sc">/</span>bouquets</span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">

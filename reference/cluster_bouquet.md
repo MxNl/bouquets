@@ -5,7 +5,13 @@ Encodes each time series as a sequence of signed directional steps
 series based on the similarity of those sequences. The resulting
 `cluster` column can be passed directly to
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
-via `stem_colors`, `flower_colors`, or `facet_by`.
+via `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
+
+The returned object is both the original `data` tibble (with an added
+cluster column) **and** a `cluster_bouquet` S3 object. Call
+[`summary.cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/summary.cluster_bouquet.md)
+on it to print a structured report of cluster quality, sizes, and member
+series.
 
 ## Usage
 
@@ -22,7 +28,8 @@ cluster_bouquet(
   resolution = 0.5,
   pca_variance = 0.9,
   cluster_col = "cluster",
-  verbose = TRUE
+  seed = 42L,
+  verbose = FALSE
 )
 ```
 
@@ -30,7 +37,7 @@ cluster_bouquet(
 
 - data:
 
-  A long-format data frame or tibble — the same format expected by
+  A long-format data frame or tibble – the same format expected by
   [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md).
 
 - time_col:
@@ -53,12 +60,12 @@ cluster_bouquet(
 
   Either a positive integer specifying the number of clusters, or
   `"auto"` (default) to select the optimal number by maximising the
-  composite silhouette score across `k = 2, …, k_max`.
+  composite silhouette score across `k = 2, ..., k_max`.
 
 - k_max:
 
-  A single positive integer. The upper bound considered when
-  `k = "auto"`. Capped internally at `n_series - 1`. Defaults to `8L`.
+  A single positive integer. Upper bound considered when `k = "auto"`.
+  Capped at `n_series - 1`. Defaults to `8L`.
 
 - method:
 
@@ -66,146 +73,106 @@ cluster_bouquet(
 
   `"pca_hclust"`
 
-  :   (Default) Projects direction sequences onto their principal
-      components retaining `pca_variance` of variance, then applies
-      agglomerative hierarchical clustering with Ward's D2 linkage in
-      that space. The PCA step removes noise dimensions that dilute
-      cluster separation in long series. Deterministic; no extra
-      packages required. The `distance` argument does not apply —
-      distance is always Euclidean in PCA space.
+  :   (Default) PCA projection followed by agglomerative hierarchical
+      clustering with Ward's D2. Deterministic; no extra packages
+      required. The `distance` argument does not apply.
 
   `"pca_kmeans"`
 
-  :   PCA projection followed by k-means. Faster for large numbers of
-      series; non-deterministic (set a seed for reproducibility). The
-      `distance` argument does not apply.
+  :   PCA projection followed by k-means. Set `seed` for
+      reproducibility. The `distance` argument does not apply.
 
   `"hclust"`
 
-  :   Hierarchical clustering with Ward's D2 directly on the direction
-      sequences, using the `distance` metric. Best for short series (\<
-      ~50 steps) where the raw sequence distance is meaningful.
+  :   Ward's D2 hierarchical clustering directly on the direction
+      sequences using the `distance` metric. Best for short series.
 
   `"kmeans"`
 
-  :   k-means directly on the direction sequences. The `distance`
-      argument does not apply (k-means always uses Euclidean
-      internally). Suitable for short series with many observations.
+  :   k-means on the direction sequences. Always uses Euclidean distance
+      internally. Set `seed` for reproducibility.
 
   `"pam"`
 
-  :   Partitioning Around Medoids using the `distance` metric. More
-      robust to outlier series than k-means because cluster centres are
-      always real observations. Requires the cluster package.
+  :   Partitioning Around Medoids. More robust to outliers. Requires the
+      cluster package.
 
 - distance:
 
-  The distance metric applied to the raw direction sequences. One of:
-
-  `"euclidean"`
-
-  :   (Default) Penalises step-by-step disagreements between sequences.
-
-  `"correlation"`
-
-  :   Converts Pearson correlation to a distance as \\1 - r\\, measuring
-      whether series *co-move* in their ups and downs regardless of
-      their absolute patterns. Often the most meaningful metric for
-      hydrological series.
-
-  `"manhattan"`
-
-  :   Sum of absolute step differences. Less sensitive to occasional
-      large divergences than Euclidean.
-
-  **Note**: only applied by `"hclust"` and `"pam"`. The PCA methods
-  always use Euclidean distance in the reduced space; k-means has no
-  distance argument by design.
+  Distance metric for `"hclust"` and `"pam"`. One of `"euclidean"`
+  (default), `"correlation"` (\\1 - r\\), or `"manhattan"`. Not used by
+  PCA methods or `"kmeans"`.
 
 - resolution:
 
-  A non-negative number controlling the preference for more vs fewer
-  clusters during automatic k selection. The composite score is:
-
-  \$\$\text{score}(k) = \bar{s}(k) \times \min_c \bar{s}\_c(k) \times
-  k^{\text{resolution}}\$\$
-
-  where \\\bar{s}(k)\\ is the overall mean silhouette width and \\\min_c
-  \bar{s}\_c(k)\\ is the mean silhouette of the *worst* cluster.
-  Increasing `resolution` rewards finer groupings as long as all
-  clusters remain well-defined. `resolution = 0` falls back to plain
-  mean silhouette. Defaults to `0.5`.
+  A non-negative number. Composite k-selection score: \\\bar{s}(k)
+  \times \min_c \bar{s}\_c(k) \times k^{\text{resolution}}\\. Higher
+  values favour finer clusters. `0` = plain mean silhouette. Default
+  `0.5`.
 
 - pca_variance:
 
-  A number in `(0, 1]`. The cumulative proportion of variance to retain
-  during PCA compression. Only used by `"pca_hclust"` and
-  `"pca_kmeans"`. Defaults to `0.90`.
+  Cumulative variance retained during PCA. Only used by `"pca_hclust"`
+  and `"pca_kmeans"`. Default `0.90`.
 
 - cluster_col:
 
-  A string. The name of the column added to `data`. Defaults to
+  String. Name of the cluster column added to `data`. Default
   `"cluster"`.
+
+- seed:
+
+  Integer or `NULL`. Random seed passed to
+  [`base::set.seed()`](https://rdrr.io/r/base/Random.html) before
+  k-means initialisation. Ensures reproducible results for
+  `"pca_kmeans"` and `"kmeans"`. `NULL` = no seed (non-reproducible).
+  Default `42L`.
 
 - verbose:
 
-  Logical. Whether to print the k selection table, chosen k, mean
-  silhouette, and cluster sizes. Defaults to `TRUE`.
+  Logical. Print k selection table, chosen k, silhouette score, and
+  cluster sizes. Default `FALSE`.
 
 ## Value
 
-The original `data` tibble with one additional factor column named by
-`cluster_col`. Levels are `"C1"`, `"C2"`, … ordered by decreasing
-cluster size.
+The original `data` tibble with one additional factor column (named by
+`cluster_col`, levels `"C1"`, `"C2"`, ... ordered by decreasing size)
+plus a `cluster_bouquet` S3 class. The object also carries a `bq_meta`
+attribute containing all clustering diagnostics; use
+[`summary.cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/summary.cluster_bouquet.md)
+to print them.
 
 ## Details
 
 ### Feature representation
 
 Each series of length \\n\\ is represented as a vector of \\n - 1\\
-signed steps \\d_i \in \\-1, 0, +1\\\\. These form the rows of a feature
-matrix \\M \in \mathbb{R}^{n\_\text{series} \times (n-1)}\\.
+signed steps \\d_i \in \\-1, 0, +1\\\\.
 
-### Which method and distance to choose
-
-For typical hydrological series (weekly to daily, many years):
-
-- Start with `"pca_hclust"` (default). PCA compression removes the noise
-  that makes long raw sequences hard to separate.
-
-- If you suspect the series differ mainly in *co-movement* rather than
-  exact pattern, try `method = "hclust", distance = "correlation"`. This
-  is often the most geologically meaningful choice.
-
-- Use `"pam"` when you want cluster representatives to be real observed
-  series that you can point to in the data.
-
-### Composite k-selection score
+### Composite k-selection
 
 Plain mean silhouette consistently selects k = 2 because two large blobs
-almost always score well globally even when finer structure exists. The
-composite score adds two corrections: the worst-cluster term \\\min_c
-\bar{s}\_c(k)\\ kills solutions where one cluster is ill-defined, and
-the resolution exponent \\k^\text{resolution}\\ rewards cleaner
-solutions at higher k.
+score globally well even when finer structure exists. The composite
+score adds a worst-cluster penalty and a resolution exponent.
 
 ### Pairing with [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 
     data |>
       cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
       make_plot_bouquet(
-        time_col      = date,
-        series_col    = id,
-        value_col     = gwl,
-        stem_colors   = cluster,
-        flower_colors = cluster,
-        facet_by      = cluster
+        time_col      = date,   series_col    = id,   value_col = gwl,
+        stem_colors   = cluster, flower_colors = cluster,
+        lon_col = lon, lat_col = lat, cluster_hull = cluster
       )
 
 ## See also
 
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 for visualising the result.
+[`summary.cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/summary.cluster_bouquet.md)
+for a structured quality report.
+[`plot_cluster_quality()`](https://mxnl.github.io/bouquets/reference/plot_cluster_quality.md)
+to plot silhouette scores across k.
 
 ## Examples
 
@@ -231,97 +198,44 @@ gw_long <- tibble::tibble(
 # Default: PCA + hclust, auto k
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
-#> PCA: retaining 5 / 51 components (100% variance explained)
-#> 
-#> Auto k selection (composite silhouette score):
-#>   k = 2 : 0.0063
-#>   k = 3 : 0.0011
-#>   k = 4 : 0.0533 <-- selected
-#>   k = 5 : 0.0302
-#> 
-#> cluster_bouquet  |  method = pca_hclust  |  distance = euclidean (unused)
-#> k = 4  |  mean silhouette = 0.053  |  resolution = 0.50
-#> Cluster sizes:
-#>   C1 : 2 series
-#>   C2 : 2 series
-#>   C3 : 1 series
-#>   C4 : 1 series
-#> 
 
-# Correlation distance with hclust — often best for hydrological series
-clustered_corr <- cluster_bouquet(gw_long,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  method     = "hclust",
-  distance   = "correlation"
-)
+# Inspect the result
+summary(clustered)
+#> -- cluster_bouquet summary ----------------------------------------------
+#>   Method    : pca_hclust
+#>   Distance  : euclidean (unused)
+#>   Seed      : 42
+#>   Series    : 6   k = 4   Resolution = 0.50
+#>   Mean silhouette : 0.053  (weak structure -- consider more data or fewer clusters)
 #> 
-#> Auto k selection (composite silhouette score):
-#>   k = 2 : 0.0272
-#>   k = 3 : 0.0040
-#>   k = 4 : 0.1164 <-- selected
-#>   k = 5 : 0.0719
+#>   Auto k selection (composite silhouette score):
+#>     k = 2 : 0.0063
+#>     k = 3 : 0.0011
+#>     k = 4 : 0.0533  <-- selected
+#>     k = 5 : 0.0302
 #> 
-#> cluster_bouquet  |  method = hclust  |  distance = correlation
-#> k = 4  |  mean silhouette = 0.116  |  resolution = 0.50
-#> Cluster sizes:
-#>   C1 : 2 series
-#>   C2 : 2 series
-#>   C3 : 1 series
-#>   C4 : 1 series
+#>   Cluster sizes and members:
+#>     C1  (2 series, mean sil = 0.069)
+#>        S1, S4
+#>     C2  (2 series, mean sil = 0.090)
+#>        S3, S6
+#>     C3  (1 series, mean sil = 0.000)
+#>        S2
+#>     C4  (1 series, mean sil = 0.000)
+#>        S5
 #> 
+#>   Per-series silhouette widths:
+#>     S1                    C1   0.074  |
+#>     S4                    C1   0.065  |
+#>     S3                    C2   0.110  ||
+#>     S6                    C2   0.071  |
+#>     S2                    C3   0.000  
+#>     S5                    C4   0.000  
+#> ------------------------------------------------------------------------
 
-# Increase resolution to push toward finer, cleaner clusters
-clustered_fine <- cluster_bouquet(gw_long,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  resolution = 1.5
-)
-#> PCA: retaining 5 / 51 components (100% variance explained)
-#> 
-#> Auto k selection (composite silhouette score):
-#>   k = 2 : 0.0126
-#>   k = 3 : 0.0033
-#>   k = 4 : 0.0533 <-- selected
-#>   k = 5 : 0.0302
-#> 
-#> cluster_bouquet  |  method = pca_hclust  |  distance = euclidean (unused)
-#> k = 4  |  mean silhouette = 0.053  |  resolution = 1.50
-#> Cluster sizes:
-#>   C1 : 2 series
-#>   C2 : 2 series
-#>   C3 : 1 series
-#>   C4 : 1 series
-#> 
-
-# Visualise — colour and facet by cluster
+# Plot silhouette scores across k to inspect the elbow
 # \donttest{
-make_plot_bouquet(clustered,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = cluster,
-  flower_colors = cluster,
-  facet_by      = cluster,
-  title         = "Groundwater Stations by Directional Cluster"
-)
-#> === Heading sweep per series (max - min of cumulative net steps) ===
-#> # A tibble: 6 × 2
-#>   bq_s  cum_net_range
-#>   <chr>         <int>
-#> 1 S1               11
-#> 2 S2               10
-#> 3 S3               18
-#> 4 S4                8
-#> 5 S5               11
-#> 6 S6               14
-#> 
-#> Binding series : S3 (sweep = 18 steps)
-#> Ceiling angle  : 20.00°
-#> theta (80%)  : 16.00°
-#> 
+plot_cluster_quality(clustered)
 
 # }
 ```

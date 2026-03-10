@@ -1,451 +1,339 @@
 # Getting started with bouquets
 
+![bouquets hex sticker](../reference/figures/logo.svg)
+
 ## What is a bouquet plot?
 
-A **bouquet plot** (also called an angular accumulation plot) converts
-the directional dynamics of a time series into a 2-D turtle-graphics
-path:
+An angular accumulation plot encodes each time series as a
+turtle-graphics path from a shared origin. At every time step:
 
-- Each **increase** turns the heading left by a fixed angle $\theta$.
-- Each **decrease** turns it right by $\theta$.
-- No change keeps the heading straight.
+- an **increase** turns the heading **left** by θ,
+- a **decrease** turns it **right** by θ,
+- **no change** goes straight ahead.
 
-All series share the same origin and angle, so paths that look alike
-come from series with similar up/down patterns — not necessarily similar
-values. The technique is structurally related to DNA walk visualisations
-(Gates 1986).
+Because every series shares the same origin and angle, paths that look
+similar belong to series with similar patterns of ups and downs —
+regardless of their absolute values. The collection of paths radiates
+from the origin like stems in a bouquet.
 
-## Minimal example
+## Simulated data
+
+Throughout this vignette we use a simulated set of eight groundwater
+monitoring stations, each with a weekly time series containing a shared
+seasonal signal plus independent noise.
 
 ``` r
 set.seed(42)
-n      <- 52L
-weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n)
-season <- sin(seq(0, 2 * pi, length.out = n))
+n      <- 104L   # 2 years, weekly
+weeks  <- seq(as.Date("2022-01-01"), by = "week", length.out = n)
+season <- sin(seq(0, 4 * pi, length.out = n))
 
 gw_long <- tibble::tibble(
   week    = rep(weeks, 8L),
-  station = rep(paste0("Station ", LETTERS[1:8]), each = n),
-  region  = rep(c("North", "North", "North", "North",
-                  "South", "South", "South", "South"), each = n),
+  station = rep(paste0("S", 1:8), each = n),
+  region  = rep(c("North", "North", "South", "South",
+                  "East",  "East",  "West",  "West"), each = n),
+  lon     = rep(c(7.2, 8.1, 13.4, 14.1, 10.5, 11.2, 6.9, 7.8), each = n),
+  lat     = rep(c(53.6, 53.1, 52.5, 52.0, 50.8, 50.3, 48.1, 47.8), each = n),
   level_m = c(
-    8.5 + 0.8 * season + cumsum(rnorm(n,  0.00, 0.18)),
+    8.5 + 0.9 * season + cumsum(rnorm(n,  0.00, 0.18)),
+    8.3 + 0.8 * season + cumsum(rnorm(n,  0.01, 0.20)),
     7.2 + 0.5 * season + cumsum(rnorm(n,  0.02, 0.22)),
+    7.0 + 0.6 * season + cumsum(rnorm(n,  0.00, 0.19)),
     9.1 + 1.1 * season + cumsum(rnorm(n, -0.01, 0.15)),
-    6.8 + 0.9 * season + cumsum(rnorm(n,  0.01, 0.20)),
-    5.4 + 1.2 * season + cumsum(rnorm(n, -0.02, 0.17)),
-    7.7 + 0.6 * season + cumsum(rnorm(n,  0.00, 0.21)),
-    8.9 + 0.7 * season + cumsum(rnorm(n,  0.01, 0.19)),
-    6.2 + 1.0 * season + cumsum(rnorm(n, -0.01, 0.16))
+    9.3 + 1.0 * season + cumsum(rnorm(n, -0.02, 0.16)),
+    6.8 + 0.3 * season + cumsum(rnorm(n,  0.00, 0.28)),
+    7.5 + 0.4 * season + cumsum(rnorm(n,  0.01, 0.25))
   )
 )
+```
 
-make_plot_bouquet(gw_long,
+## Minimal plot
+
+The simplest call uses the first three columns as time, series, and
+value.
+
+``` r
+make_plot_bouquet(
+  gw_long,
   time_col   = week,
   series_col = station,
-  value_col  = level_m,
-  verbose    = FALSE
+  value_col  = level_m
 )
 ```
+
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
 
 ![](bouquets_files/figure-html/minimal-1.png)
 
-Column order defaults make the call even shorter when your data is
-already in the right column order:
-`make_plot_bouquet(gw_long, verbose = FALSE)`.
+## Colour and faceting
 
-------------------------------------------------------------------------
-
-## Colour modes
-
-Both `stem_colors` (the path lines) and `flower_colors` (the ✿ end
-markers) accept four different types of input.
-
-### 1 — Single hex colour
+`stem_colors` and `flower_colors` each accept a single hex code, a
+vector of hex codes, a keyword (`"greens"` / `"blossom"`), or a bare
+column name.
 
 ``` r
-make_plot_bouquet(gw_long,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = "#2d6a9f",
-  flower_colors = "#e07b39",
-  verbose       = FALSE
-)
-```
-
-![](bouquets_files/figure-html/single-hex-1.png)
-
-### 2 — Named keywords
-
-`"greens"` and `"blossom"` select curated palettes:
-
-``` r
-make_plot_bouquet(gw_long,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = "greens",
-  flower_colors = "blossom",
-  verbose       = FALSE
-)
-```
-
-![](bouquets_files/figure-html/keywords-1.png)
-
-### 3 — Vector of hex colours (one per series)
-
-``` r
-make_plot_bouquet(gw_long,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = c("#c0392b", "#2980b9", "#27ae60"),
-  verbose       = FALSE
-)
-#> Warning: Fewer `stem_colors` supplied than series; recycling.
-```
-
-![](bouquets_files/figure-html/vector-1.png)
-
-### 4 — Column reference
-
-Pass a bare column name. Each unique value in that column gets a
-distinct perceptually uniform colour (via
-[`hues::iwanthue()`](https://rdrr.io/pkg/hues/man/iwanthue.html)):
-
-``` r
-make_plot_bouquet(gw_long,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = region,
-  flower_colors = region,
-  verbose       = FALSE
-)
-```
-
-![](bouquets_files/figure-html/column-ref-1.png)
-
-------------------------------------------------------------------------
-
-## Faceting
-
-`facet_by` accepts any column name and splits the plot via
-[`ggplot2::facet_wrap()`](https://ggplot2.tidyverse.org/reference/facet_wrap.html):
-
-``` r
-make_plot_bouquet(gw_long,
+make_plot_bouquet(
+  gw_long,
   time_col      = week,
   series_col    = station,
   value_col     = level_m,
   stem_colors   = region,
   flower_colors = region,
   facet_by      = region,
-  title         = "Groundwater dynamics by region",
-  verbose       = FALSE
+  title         = "Groundwater levels by region"
 )
 ```
 
-![](bouquets_files/figure-html/facet-1.png)
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
 
-------------------------------------------------------------------------
+![](bouquets_files/figure-html/colors-facets-1.png)
 
-## Visual options
+## Highlighting individual series
 
-### Reference rings
-
-`show_rings = TRUE` adds faint concentric circles at fixed radii to aid
-distance judgements:
+Use `highlight` to bring specific series to the foreground; all others
+are dimmed to a pale grey.
 
 ``` r
-make_plot_bouquet(gw_long,
+make_plot_bouquet(
+  gw_long,
   time_col   = week,
   series_col = station,
   value_col  = level_m,
-  show_rings = TRUE,
-  verbose    = FALSE
+  highlight  = c("S1", "S2"),
+  title      = "Stations S1 and S2 highlighted"
 )
 ```
 
-![](bouquets_files/figure-html/rings-1.png)
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
 
-### Step markers
+![](bouquets_files/figure-html/highlight-1.png)
 
-`marker_every` places a dot at every N-th step, useful for reading
-temporal progress:
+## Time window filter
+
+Use `from` and `to` to restrict the time range without pre-filtering.
 
 ``` r
-make_plot_bouquet(gw_long,
-  time_col     = week,
-  series_col   = station,
-  value_col    = level_m,
-  marker_every = 13L,   # quarterly for weekly data
-  verbose      = FALSE
+make_plot_bouquet(
+  gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  from       = as.Date("2022-07-01"),
+  to         = as.Date("2022-12-31"),
+  title      = "Second half of 2022 only"
 )
 ```
 
-![](bouquets_files/figure-html/markers-1.png)
+    ## <bouquet_plot>  8 series | theta = 26.2 deg | binding: S5
 
-### Dark mode
+![](bouquets_files/figure-html/timewindow-1.png)
+
+## Normalised mode
+
+When `normalise = TRUE` each series receives its own per-series θ so
+every path uses the full angular range independently of volatility. This
+aids shape comparison across series with very different variances.
 
 ``` r
-make_plot_bouquet(gw_long,
+make_plot_bouquet(
+  gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  normalise  = TRUE,
+  title      = "Per-series normalised angles"
+)
+```
+
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5 [normalised]
+
+![](bouquets_files/figure-html/normalise-1.png)
+
+## Clustering
+
+[`cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/cluster_bouquet.md)
+adds a `cluster` column to the data. It returns a `cluster_bouquet`
+object: a normal tibble that also carries clustering diagnostics. Call
+[`summary()`](https://rdrr.io/r/base/summary.html) to inspect them.
+
+``` r
+clustered <- cluster_bouquet(
+  gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  seed       = 42L
+)
+
+summary(clustered)
+```
+
+    ## -- cluster_bouquet summary ----------------------------------------------
+    ##   Method    : pca_hclust
+    ##   Distance  : euclidean (unused)
+    ##   Seed      : 42
+    ##   Series    : 8   k = 3   Resolution = 0.50
+    ##   Mean silhouette : 0.031  (weak structure -- consider more data or fewer clusters)
+    ## 
+    ##   Auto k selection (composite silhouette score):
+    ##     k = 2 : 0.0020
+    ##     k = 3 : 0.0311  <-- selected
+    ##     k = 4 : 0.0154
+    ##     k = 5 : -0.0040
+    ##     k = 6 : -0.0013
+    ##     k = 7 : -0.0074
+    ## 
+    ##   Cluster sizes and members:
+    ##     C1  (5 series, mean sil = 0.033)
+    ##        S1, S2, S5, S6, S7
+    ##     C2  (2 series, mean sil = 0.041)
+    ##        S3, S4
+    ##     C3  (1 series, mean sil = 0.000)
+    ##        S8
+    ## 
+    ##   Per-series silhouette widths:
+    ##     S5                    C1   0.062  |
+    ##     S6                    C1   0.035  |
+    ##     S2                    C1   0.031  |
+    ##     S7                    C1   0.029  |
+    ##     S1                    C1   0.011  
+    ##     S4                    C2   0.075  |
+    ##     S3                    C2   0.006  
+    ##     S8                    C3   0.000  
+    ## ------------------------------------------------------------------------
+
+### Visualise cluster quality
+
+[`plot_cluster_quality()`](https://mxnl.github.io/bouquets/reference/plot_cluster_quality.md)
+plots the composite silhouette score across all candidate k values; the
+selected k is highlighted in pink.
+
+``` r
+plot_cluster_quality(clustered)
+```
+
+![](bouquets_files/figure-html/cluster-quality-1.png)
+
+### Plot coloured and faceted by cluster
+
+The `cluster` column works directly with `stem_colors`, `flower_colors`,
+and `facet_by`.
+
+``` r
+make_plot_bouquet(
+  clustered,
   time_col      = week,
   series_col    = station,
   value_col     = level_m,
-  stem_colors   = "greens",
-  flower_colors = "blossom",
-  dark_mode     = TRUE,
-  title         = "Groundwater — dark mode",
-  verbose       = FALSE
+  stem_colors   = cluster,
+  flower_colors = cluster,
+  title         = "Stations coloured by directional cluster"
 )
 ```
 
-![](bouquets_files/figure-html/dark-1.png)
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
 
-### Launch direction and ceiling percentage
+![](bouquets_files/figure-html/cluster-plot-1.png)
 
-`launch_deg` sets the initial heading (90° = upward, the default).
-`ceiling_pct` controls how tight the turns are: values close to 1 make
-turns pronounced; smaller values leave more headroom before a loop would
-occur.
+## Location map with cluster hulls
+
+When `lon_col` and `lat_col` are supplied a location map is appended to
+the right of the bouquet panel. Pass the cluster column to
+`cluster_hull` to draw concave hulls around each cluster’s points. Hull
+fill colour automatically matches the cluster’s `flower_colors`.
 
 ``` r
-make_plot_bouquet(gw_long,
-  time_col    = week,
-  series_col  = station,
-  value_col   = level_m,
-  launch_deg  = 45,
-  ceiling_pct = 0.60,
-  verbose     = FALSE
+make_plot_bouquet(
+  clustered,
+  time_col      = week,
+  series_col    = station,
+  value_col     = level_m,
+  stem_colors   = cluster,
+  flower_colors = cluster,
+  lon_col       = lon,
+  lat_col       = lat,
+  cluster_hull  = cluster,
+  title         = "Colour-matched cluster hulls"
 )
 ```
 
-![](bouquets_files/figure-html/angle-1.png)
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5 + map
 
-------------------------------------------------------------------------
+![](bouquets_files/figure-html/map-hull-1.png)
 
-## Clustering with `cluster_bouquet()`
+### Focusing on the cluster core with `hull_coverage`
 
-[`cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/cluster_bouquet.md)
-groups series by the similarity of their directional sequences and
-appends a `cluster` factor column. The result plugs directly into
-[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md).
+When clusters are spatially dense or overlap, hulls drawn over all
+points can obscure the map. `hull_coverage` (default `1`) restricts the
+hull to the fraction of each cluster’s points that lie closest to the
+cluster centroid. Setting it to `0.75`, for example, excludes the
+outermost 25% of points before computing the hull:
 
 ``` r
-set.seed(42)
-n_big  <- 52L
-weeks  <- seq(as.Date("2023-01-01"), by = "week", length.out = n_big)
-season <- sin(seq(0, 2 * pi, length.out = n_big))
-
-gw6 <- tibble::tibble(
-  week    = rep(weeks, 6L),
-  station = rep(paste0("S", 1:6), each = n_big),
-  level_m = c(
-    8.5 + 0.8 * season + cumsum(rnorm(n_big,  0.00, 0.2)),
-    8.3 + 0.7 * season + cumsum(rnorm(n_big,  0.01, 0.2)),
-    7.2 + 0.5 * season + cumsum(rnorm(n_big,  0.02, 0.2)),
-    7.0 + 0.6 * season + cumsum(rnorm(n_big,  0.00, 0.2)),
-    9.1 + 1.1 * season + cumsum(rnorm(n_big, -0.01, 0.2)),
-    9.3 + 1.0 * season + cumsum(rnorm(n_big, -0.02, 0.2))
-  )
+make_plot_bouquet(
+  clustered,
+  time_col      = week,
+  series_col    = station,
+  value_col     = level_m,
+  stem_colors   = cluster,
+  flower_colors = cluster,
+  lon_col       = lon,
+  lat_col       = lat,
+  cluster_hull  = cluster,
+  hull_coverage = 0.75,   # hull covers the innermost 75% of each cluster
+  title         = "Cluster hulls: core 75%"
 )
-
-clustered <- cluster_bouquet(gw6,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  verbose    = FALSE
-)
-
-dplyr::distinct(clustered, station, cluster)
-#> # A tibble: 6 × 2
-#>   station cluster
-#>   <chr>   <fct>  
-#> 1 S1      C1     
-#> 2 S2      C3     
-#> 3 S3      C2     
-#> 4 S4      C1     
-#> 5 S5      C4     
-#> 6 S6      C2
 ```
 
-Colour and facet the bouquet by cluster in one pipe:
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5 + map
+
+![](bouquets_files/figure-html/map-hull-core-1.png)
+
+## Saving plots
+
+[`save_bouquet()`](https://mxnl.github.io/bouquets/reference/save_bouquet.md)
+wraps
+[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html)
+with sensible defaults for the bouquet aspect ratio.
 
 ``` r
-clustered |>
+p <- make_plot_bouquet(gw_long, week, station, level_m)
+save_bouquet(p, "my_bouquet.png", width = 10, height = 8)
+```
+
+## Interactive version
+
+[`make_plot_bouquet_interactive()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet_interactive.md)
+produces a plotly figure with hover tooltips. Requires the `plotly`
+package.
+
+``` r
+make_plot_bouquet_interactive(gw_long, week, station, level_m)
+```
+
+## Full pipeline
+
+A compact end-to-end workflow:
+
+``` r
+gw_long |>
+  cluster_bouquet(
+    time_col   = week,
+    series_col = station,
+    value_col  = level_m,
+    seed       = 42L
+  ) |>
   make_plot_bouquet(
     time_col      = week,
     series_col    = station,
     value_col     = level_m,
     stem_colors   = cluster,
     flower_colors = cluster,
-    facet_by      = cluster,
-    title         = "Series grouped by directional dynamics",
-    verbose       = FALSE
-  )
-```
-
-![](bouquets_files/figure-html/cluster-plot-1.png)
-
-### Clustering methods
-
-Five algorithms are available via the `method` argument:
-
-| Method         | Description                                                             |
-|----------------|-------------------------------------------------------------------------|
-| `"pca_hclust"` | **(default)** PCA compression + Ward’s D2 hclust. Best for long series. |
-| `"pca_kmeans"` | PCA + k-means. Faster for many series.                                  |
-| `"hclust"`     | Ward’s D2 directly on direction sequences. Good for short series.       |
-| `"kmeans"`     | k-means on raw sequences.                                               |
-| `"pam"`        | Partitioning Around Medoids. Cluster centres are real observed series.  |
-
-The `distance` argument (`"euclidean"`, `"correlation"`, `"manhattan"`)
-applies to `"hclust"` and `"pam"`. Correlation distance measures whether
-two series **co-move** regardless of amplitude, which is often the most
-meaningful choice for hydrological data:
-
-``` r
-cluster_bouquet(gw6,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  method     = "hclust",
-  distance   = "correlation",
-  verbose    = FALSE
-) |>
-  dplyr::distinct(station, cluster)
-#> # A tibble: 6 × 2
-#>   station cluster
-#>   <chr>   <fct>  
-#> 1 S1      C1     
-#> 2 S2      C3     
-#> 3 S3      C2     
-#> 4 S4      C1     
-#> 5 S5      C4     
-#> 6 S6      C2
-```
-
-### Automatic k selection
-
-When `k = "auto"` (default), the function fits the model for
-$k = 2,\ldots,k_{\text{max}}$ and selects the k that maximises:
-
-$$\text{score}(k) = \bar{s}(k) \times \min\limits_{c}{\bar{s}}_{c}(k) \times k^{\text{resolution}}$$
-
-The worst-cluster term $\min_{c}{\bar{s}}_{c}(k)$ prevents choosing a k
-where any one cluster is poorly defined. The `resolution` exponent
-rewards finer groupings while they remain well-separated. Increase it to
-push toward more clusters:
-
-``` r
-cluster_bouquet(gw6,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  resolution = 1.5,
-  verbose    = FALSE
-) |>
-  dplyr::distinct(station, cluster)
-#> # A tibble: 6 × 2
-#>   station cluster
-#>   <chr>   <fct>  
-#> 1 S1      C1     
-#> 2 S2      C3     
-#> 3 S3      C2     
-#> 4 S4      C1     
-#> 5 S5      C4     
-#> 6 S6      C2
-```
-
-Fix k directly when you already know how many groups you need:
-
-``` r
-cluster_bouquet(gw6,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  k          = 2L,
-  verbose    = FALSE
-) |>
-  dplyr::distinct(station, cluster)
-#> # A tibble: 6 × 2
-#>   station cluster
-#>   <chr>   <fct>  
-#> 1 S1      C2     
-#> 2 S2      C1     
-#> 3 S3      C1     
-#> 4 S4      C2     
-#> 5 S5      C1     
-#> 6 S6      C1
-```
-
-------------------------------------------------------------------------
-
-## Location map panel
-
-When coordinate columns are supplied,
-[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
-attaches a location map to the right of the bouquet. Points are coloured
-to match the flower markers. The map background is drawn from the `maps`
-package (country outlines) or `mapdata` (sub-national boundaries) if
-installed.
-
-Coordinates in WGS84 decimal degrees work directly. For projected
-coordinates supply the EPSG code via `coord_crs`:
-
-``` r
-# Stations spread across Germany north to south, coast to border
-gw_coords <- dplyr::mutate(gw_long,
-  lon = rep(c(6.9, 13.4, 9.9, 12.1, 7.5, 11.2, 8.7, 14.8), each = n),
-  lat = rep(c(53.6, 52.5, 51.5, 48.1, 51.2, 49.8, 47.8, 50.9), each = n)
-)
-
-make_plot_bouquet(gw_coords,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  lon_col    = lon,
-  lat_col    = lat,
-  map_width  = 0.35,
-  verbose    = FALSE
-)
-```
-
-![](bouquets_files/figure-html/map-1.png)
-
-`map_width` controls the relative width of the map panel (default `0.35`
-= 35 % of the combined figure width). The map is automatically zoomed
-and padded around the point locations, and works for any country or
-region.
-
-------------------------------------------------------------------------
-
-## Combining everything
-
-``` r
-  cluster_bouquet(
-    time_col   = date,
-    series_col = well_id,
-    value_col  = gwl,
-    method     = "pca_hclust",
-    distance   = "euclidean",
-    resolution = 0.8
-  ) |>
-  make_plot_bouquet(
-    time_col      = date,
-    series_col    = well_id,
-    value_col     = gwl,
-    stem_colors   = cluster,
-    flower_colors = cluster,
-    facet_by      = cluster,
-    lon_col       = easting,
-    lat_col       = northing,
-    coord_crs     = 3035,
-    show_rings    = TRUE,
-    dark_mode     = TRUE,
-    title         = "Groundwater dynamics by directional cluster",
-    verbose       = FALSE
+    lon_col       = lon,
+    lat_col       = lat,
+    cluster_hull  = cluster,
+    hull_coverage = 0.75,
+    title         = "Groundwater directional dynamics"
   )
 ```

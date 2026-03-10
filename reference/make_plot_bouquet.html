@@ -4,22 +4,12 @@ encoding the binary direction of consecutive changes as fixed-angle turns:
 an increase turns the heading left by \(\theta\) and a decrease turns
 it right by \(\theta\). No change continues straight ahead. Because
 all series share the same origin and angle, the visual similarity of paths
-directly reflects the similarity of fluctuation patterns across series.
-The rotation angle \(\theta\) is derived automatically from the data.
-The binding constraint is the series whose cumulative heading sweeps the
-widest arc (measured as max(cumsum) - min(cumsum) of the signed steps).
-\(\theta\) is set to ceiling_pct of the largest angle that would not
-cause that series to complete a full 360° loop."><meta property="og:description" content="Draws each time series as a turtle-graphics path from a shared origin,
+directly reflects the similarity of fluctuation patterns across series."><meta property="og:description" content="Draws each time series as a turtle-graphics path from a shared origin,
 encoding the binary direction of consecutive changes as fixed-angle turns:
 an increase turns the heading left by \(\theta\) and a decrease turns
 it right by \(\theta\). No change continues straight ahead. Because
 all series share the same origin and angle, the visual similarity of paths
-directly reflects the similarity of fluctuation patterns across series.
-The rotation angle \(\theta\) is derived automatically from the data.
-The binding constraint is the series whose cumulative heading sweeps the
-widest arc (measured as max(cumsum) - min(cumsum) of the signed steps).
-\(\theta\) is set to ceiling_pct of the largest angle that would not
-cause that series to complete a full 360° loop."></head><body>
+directly reflects the similarity of fluctuation patterns across series."><meta property="og:image" content="https://mxnl.github.io/bouquets/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -47,8 +37,7 @@ cause that series to complete a full 360° loop."></head><body>
 </nav><div class="container template-reference-topic">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Angular Accumulation (Flower Bouquet) Plot for Time Series</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Angular Accumulation (Flower Bouquet) Plot for Time Series</h1>
       <small class="dont-index">Source: <a href="https://github.com/MxNl/bouquets/blob/main/R/make_plot_bouquet.R" class="external-link"><code>R/make_plot_bouquet.R</code></a></small>
       <div class="d-none name"><code>make_plot_bouquet.Rd</code></div>
     </div>
@@ -60,11 +49,6 @@ an increase turns the heading <strong>left</strong> by \(\theta\) and a decrease
 it <strong>right</strong> by \(\theta\). No change continues straight ahead. Because
 all series share the same origin and angle, the visual similarity of paths
 directly reflects the similarity of fluctuation patterns across series.</p>
-<p>The rotation angle \(\theta\) is derived automatically from the data.
-The binding constraint is the series whose cumulative heading sweeps the
-widest arc (measured as <code>max(cumsum) - min(cumsum)</code> of the signed steps).
-\(\theta\) is set to <code>ceiling_pct</code> of the largest angle that would not
-cause that series to complete a full 360° loop.</p>
     </div>
 
     <div class="section level2">
@@ -89,7 +73,14 @@ cause that series to complete a full 360° loop.</p>
 <span>  lat_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  map_width <span class="op">=</span> <span class="fl">0.35</span>,</span>
 <span>  coord_crs <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  cluster_hull <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  hull_coverage <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  blend <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  highlight <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  from <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  to <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  normalise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -101,7 +92,7 @@ cause that series to complete a full 360° loop.</p>
 <dd><p>A long-format data frame or tibble with at minimum a time
 column, a series identifier column, and a numeric value column. Additional
 factor or character columns may be referenced by <code>stem_colors</code>,
-<code>flower_colors</code>, and <code>facet_by</code>.</p></dd>
+<code>flower_colors</code>, <code>facet_by</code>, and <code>cluster_hull</code>.</p></dd>
 
 
 <dt id="arg-time-col">time_col<a class="anchor" aria-label="anchor" href="#arg-time-col"></a></dt>
@@ -111,134 +102,166 @@ column. Defaults to the first column.</p></dd>
 
 <dt id="arg-series-col">series_col<a class="anchor" aria-label="anchor" href="#arg-series-col"></a></dt>
 <dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; The column
-identifying each individual time series (e.g. a station name).
-Defaults to the second column.</p></dd>
+identifying each individual time series. Defaults to the second column.</p></dd>
 
 
 <dt id="arg-value-col">value_col<a class="anchor" aria-label="anchor" href="#arg-value-col"></a></dt>
 <dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; The numeric
-column containing the measured values. Defaults to the third column.</p></dd>
+value column. Defaults to the third column.</p></dd>
 
 
 <dt id="arg-stem-colors">stem_colors<a class="anchor" aria-label="anchor" href="#arg-stem-colors"></a></dt>
 <dd><p>Controls the colour of the time series lines. Four
-options are accepted:</p><ul><li><p>A single hex string — all lines share that colour. Default:
+options are accepted:</p><ul><li><p>A single hex string – all lines share that colour. Default:
 <code>"#3a7d2c"</code> (plant green).</p></li>
-<li><p>A character vector of hex strings, one per series — matched by
-position; recycled with a warning if too short.</p></li>
-<li><p><code>"greens"</code> — each series receives a distinct shade from a curated
-palette of natural greens.</p></li>
-<li><p>A bare column name referencing a factor or character column in
-<code>data</code> — each series is coloured by that column's value.</p></li>
+<li><p>A character vector of hex strings, one per series – recycled
+with a warning if too short.</p></li>
+<li><p><code>"greens"</code> – distinct shades from a curated palette of natural
+greens.</p></li>
+<li><p>A bare column name in <code>data</code> – each series is coloured by that
+column's value using perceptually uniform colours.</p></li>
 </ul></dd>
 
 
 <dt id="arg-flower-colors">flower_colors<a class="anchor" aria-label="anchor" href="#arg-flower-colors"></a></dt>
-<dd><p>Controls the colour of the end-of-series ✿ symbols.
-Four options are accepted:</p><ul><li><p>A single hex string — all flowers share that colour. Default:
-<code>"#f472b6"</code> (warm pink).</p></li>
-<li><p>A character vector of hex strings, one per series — matched by
-position; recycled with a warning if too short.</p></li>
-<li><p><code>"blossom"</code> — each flower is assigned a colour from a curated
-palette of pinks, mauves, and soft corals.</p></li>
-<li><p>A bare column name referencing a factor or character column in
-<code>data</code> — each flower is coloured by that column's value.</p></li>
-</ul></dd>
+<dd><p>Controls the colour of the end-of-series flower
+symbols. Same four options as <code>stem_colors</code>. The keyword is <code>"blossom"</code>.
+Default: <code>"#f472b6"</code> (warm pink).</p></dd>
 
 
 <dt id="arg-facet-by">facet_by<a class="anchor" aria-label="anchor" href="#arg-facet-by"></a></dt>
-<dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; An optional
-bare column name referencing a factor or character column in <code>data</code>. When
-supplied the plot is split into facets via <code><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">ggplot2::facet_wrap()</a></code>, one
-panel per level. <code>NULL</code> (default) produces a single panel.</p></dd>
+<dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; Optional bare
+column name. When supplied the plot is split via <code><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">ggplot2::facet_wrap()</a></code>.
+<code>NULL</code> (default) = single panel.</p></dd>
 
 
 <dt id="arg-ceiling-pct">ceiling_pct<a class="anchor" aria-label="anchor" href="#arg-ceiling-pct"></a></dt>
-<dd><p>A single number in <code>(0, 1]</code>. The fraction of the
-theoretical maximum angle to use as \(\theta\). Lower values give more
-visual headroom; higher values make turns more pronounced. Default <code>0.80</code>.</p></dd>
+<dd><p>A single number in <code>(0, 1]</code>. Fraction of the theoretical
+maximum angle to use as \(\theta\). Default <code>0.80</code>.</p></dd>
 
 
 <dt id="arg-launch-deg">launch_deg<a class="anchor" aria-label="anchor" href="#arg-launch-deg"></a></dt>
-<dd><p>A single number. The initial heading of all series in
-degrees, measured counter-clockwise from the positive x-axis. <code>90</code> points
-straight up (north). Defaults to <code>90</code>.</p></dd>
+<dd><p>Initial heading in degrees (counter-clockwise from
+positive x-axis). <code>90</code> = straight up. Defaults to <code>90</code>.</p></dd>
 
 
 <dt id="arg-marker-every">marker_every<a class="anchor" aria-label="anchor" href="#arg-marker-every"></a></dt>
-<dd><p>A positive integer. If supplied, a filled circle is
-plotted at every <code>marker_every</code>-th step to aid reading of temporal
-progress. <code>NULL</code> (default) suppresses markers.</p></dd>
+<dd><p>Positive integer. A dot is plotted at every
+<code>marker_every</code>-th step. <code>NULL</code> (default) = no markers.</p></dd>
 
 
 <dt id="arg-show-rings">show_rings<a class="anchor" aria-label="anchor" href="#arg-show-rings"></a></dt>
-<dd><p>Logical. Whether to draw faint concentric reference rings
-centred on the origin. Defaults to <code>FALSE</code>.</p></dd>
+<dd><p>Logical. Draw faint concentric reference rings. Default
+<code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-dark-mode">dark_mode<a class="anchor" aria-label="anchor" href="#arg-dark-mode"></a></dt>
-<dd><p>Logical. <code>TRUE</code> uses a dark navy background; <code>FALSE</code>
-(default) uses a light off-white background.</p></dd>
+<dd><p>Logical. <code>TRUE</code> = dark navy background. Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-title">title<a class="anchor" aria-label="anchor" href="#arg-title"></a></dt>
-<dd><p>A string used as the plot title. <code>NULL</code> (default) = no title.</p></dd>
+<dd><p>Plot title string. <code>NULL</code> (default) = no title.</p></dd>
 
 
 <dt id="arg-subtitle">subtitle<a class="anchor" aria-label="anchor" href="#arg-subtitle"></a></dt>
-<dd><p>A string used as the subtitle. <code>NULL</code> (default)
-auto-generates a subtitle reporting \(\theta\), the binding series, time
-range, and interval.</p></dd>
+<dd><p>Subtitle string. <code>NULL</code> (default) = auto-generated summary
+of theta, binding series, time range, and interval.</p></dd>
 
 
 <dt id="arg-hide-legend-after">hide_legend_after<a class="anchor" aria-label="anchor" href="#arg-hide-legend-after"></a></dt>
-<dd><p>A single positive integer. The legend is suppressed
-when the number of series is greater than or equal to this value.
-Defaults to <code>10</code>.</p></dd>
+<dd><p>Positive integer. Legend is suppressed when
+<code>n_series &gt;= hide_legend_after</code>. Default <code>10</code>.</p></dd>
 
 
 <dt id="arg-lon-col">lon_col<a class="anchor" aria-label="anchor" href="#arg-lon-col"></a></dt>
 <dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; Optional bare
-column name containing the longitude of each series location (decimal
-degrees, WGS 84). Must be supplied together with <code>lat_col</code>. When both are
-provided a location map is attached to the right of the bouquet plot.
-<code>NULL</code> (default) = no map.</p></dd>
+column name for longitude. Must be paired with <code>lat_col</code>. When both are
+provided a location map is attached to the right via patchwork.</p></dd>
 
 
 <dt id="arg-lat-col">lat_col<a class="anchor" aria-label="anchor" href="#arg-lat-col"></a></dt>
 <dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; Optional bare
-column name containing the latitude. See <code>lon_col</code>.</p></dd>
+column name for latitude. See <code>lon_col</code>.</p></dd>
 
 
 <dt id="arg-map-width">map_width<a class="anchor" aria-label="anchor" href="#arg-map-width"></a></dt>
-<dd><p>Relative width of the location map panel as a fraction of
-the total combined width. A value of <code>0.35</code> means the map takes 35 \<!-- % of -->
-the horizontal space and the bouquet takes 65 \<!-- %. Only used when \code{lon_col} -->
-and <code>lat_col</code> are both provided. Defaults to <code>0.35</code>.</p></dd>
+<dd><p>Relative width of the map panel as a fraction of the
+combined figure width. Only used when coordinates are supplied. Default
+<code>0.35</code>.</p></dd>
 
 
 <dt id="arg-coord-crs">coord_crs<a class="anchor" aria-label="anchor" href="#arg-coord-crs"></a></dt>
-<dd><p>Integer or <code>NULL</code>. The EPSG code of the coordinate
-reference system used by <code>lon_col</code> and <code>lat_col</code>. When <code>NULL</code> (default)
-the function attempts to auto-detect the CRS from the coordinate
-magnitude. Supply an explicit code (e.g. <code>coord_crs = 3035</code> for
-ETRS89-LAEA, <code>coord_crs = 25832</code> for ETRS89-UTM32) whenever
-auto-detection gives wrong results. Decimal-degree coordinates
-(WGS84 / EPSG:4326) require no reprojection and this argument is ignored.</p></dd>
+<dd><p>Integer EPSG code or <code>NULL</code>. CRS of <code>lon_col</code>/<code>lat_col</code>.
+<code>NULL</code> = auto-detect from coordinate magnitude. Decimal-degree WGS84
+coordinates require no reprojection.</p></dd>
+
+
+<dt id="arg-cluster-hull">cluster_hull<a class="anchor" aria-label="anchor" href="#arg-cluster-hull"></a></dt>
+<dd><p>&lt;<code><a href="https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html" class="external-link">tidy-select</a></code>&gt; Optional
+bare column name containing cluster labels (e.g. the <code>cluster</code> column
+produced by <code><a href="cluster_bouquet.html">cluster_bouquet()</a></code>). When supplied <strong>and</strong> a location map is
+shown (via <code>lon_col</code>/<code>lat_col</code>), a smooth concave hull is drawn around
+each cluster's map points using <code><a href="https://ggforce.data-imaginist.com/reference/geom_mark_hull.html" class="external-link">ggforce::geom_mark_hull()</a></code> from the
+<span class="pkg">ggforce</span> package. Hull fill colour matches the cluster's
+<code>flower_colors</code>. <code>NULL</code> (default) = no hulls.</p></dd>
+
+
+<dt id="arg-hull-coverage">hull_coverage<a class="anchor" aria-label="anchor" href="#arg-hull-coverage"></a></dt>
+<dd><p>A single number in <code>(0, 1]</code>. Fraction of each
+cluster's points (those closest to the cluster centroid) included when
+computing the hull. Values below <code>1</code> exclude outlier points so the hull
+focuses on the cluster's core area, which is useful when many clusters
+overlap. Default <code>1</code> = all points.</p></dd>
+
+
+<dt id="arg-blend">blend<a class="anchor" aria-label="anchor" href="#arg-blend"></a></dt>
+<dd><p>Logical. When <code>TRUE</code> (default) and the <span class="pkg">ggblend</span> package is
+installed, cluster hull fills are composited with the
+<code>"lighten"</code> blend mode and map points with <code>"multiply"</code>, giving perceptually
+richer colour mixing where hulls and points overlap. Falls back silently to
+normal alpha blending when <span class="pkg">ggblend</span> is not available. Only affects
+the map panel; has no effect when no location map is shown.</p></dd>
+
+
+<dt id="arg-highlight">highlight<a class="anchor" aria-label="anchor" href="#arg-highlight"></a></dt>
+<dd><p>A character vector of series names to emphasise. All other
+series are drawn in a pale grey at low opacity. <code>NULL</code> (default) = all
+series equally prominent.</p></dd>
+
+
+<dt id="arg-from">from<a class="anchor" aria-label="anchor" href="#arg-from"></a></dt>
+<dd><p>Optional scalar of the same class as <code>time_col</code>. Observations
+before this value are dropped before computing paths. <code>NULL</code> = no filter.</p></dd>
+
+
+<dt id="arg-to">to<a class="anchor" aria-label="anchor" href="#arg-to"></a></dt>
+<dd><p>Optional scalar of the same class as <code>time_col</code>. Observations
+after this value are dropped. <code>NULL</code> = no filter.</p></dd>
+
+
+<dt id="arg-normalise">normalise<a class="anchor" aria-label="anchor" href="#arg-normalise"></a></dt>
+<dd><p>Logical. When <code>TRUE</code>, each series is assigned its own
+per-series \(\theta\) so that every series uses the full angular range
+independently of how volatile it is. This makes shape comparison easier
+when series have very different volatility. When <code>FALSE</code> (default) all
+series share a single global \(\theta\) derived from the most volatile
+series.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
-<dd><p>Logical. Whether to print angle diagnostics to the console.
-Defaults to <code>TRUE</code>.</p></dd>
+<dd><p>Logical. Print angle diagnostics to the console. Default
+<code>FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>When <code>lon_col</code> and <code>lat_col</code> are <code>NULL</code> (default), a
-<a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> object. When both coordinate columns are supplied, a
-<a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork</a> object combining the bouquet
-panel (left) and a location map (right); patchwork objects behave like
-ggplot objects for <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, <code>ggsave()</code>, and <code>+</code>.</p>
+    <p>A <code>bouquet_plot</code> object. When <code>lon_col</code> and <code>lat_col</code> are <code>NULL</code>,
+the underlying object is a <a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a>. When coordinates are
+supplied, it is a <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork</a> object (bouquet
+left, map right). Both are wrapped in the <code>bouquet_plot</code> S3 class which
+provides an informative <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> header and a <code><a href="https://rdrr.io/r/base/format.html" class="external-link">format()</a></code> method. All
+operations that work on ggplot/patchwork (e.g. <code>ggsave()</code>, <code>+</code>) continue
+to work.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -257,33 +280,24 @@ should share the same time index values and have equal length.</p>
 
 <p>For each series, the signed first difference is binarised to \(+1\)
 (increase), \(-1\) (decrease), or \(0\) (no change). The heading at
-step \(i\) is accumulated as:</p>
-<p>$$h_i = h_{\text{launch}} + \sum_{k=2}^{i} d_k \cdot \theta$$</p>
-<p>which is computed in one vectorised pass via <code><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">base::cumsum()</a></code>. The
-Cartesian coordinates follow as:
-\(x_i = \sum_{k=2}^{i} \cos(h_k)\), and similarly for \(y\).</p>
+step \(i\) accumulates via <code><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">base::cumsum()</a></code>; coordinates follow as
+\(x_i = \sum \cos(h_k)\), \(y_i = \sum \sin(h_k)\).</p>
 </div>
 
 <div class="section">
 <h3 id="angle-derivation">Angle derivation<a class="anchor" aria-label="anchor" href="#angle-derivation"></a></h3>
 
 
-<p>A complete loop occurs when the heading sweeps \(\geq 360°\). The sweep
-equals \((\max C - \min C) \cdot \theta\), where \(C\) is the cumulative
-sum of the signed steps. The angle is therefore:</p>
-<p>$$\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times
+<p>$$\theta = \frac{360\degree}{\max_s(\max C_s - \min C_s)} \times
   \texttt{ceiling\_pct}$$</p>
-<p>Note that <code>max(abs(C))</code> is <strong>not</strong> the correct constraint: a series that
-dips to \(-5\) then climbs to \(+20\) sweeps 25 steps' worth of angle
-even though neither extreme alone reaches 25.</p>
 </div>
 
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p>The technique is structurally related to <strong>DNA walk</strong> visualisations
-(Gates 1986; Yau et al. 2003), which encode nucleotide sequences as 2-D
-paths using similar binary-direction rules.</p></div>
+    <div class="dont-index"><p><code><a href="cluster_bouquet.html">cluster_bouquet()</a></code> to group series by directional similarity
+before plotting. <code><a href="save_bouquet.html">save_bouquet()</a></code> for convenient export.
+<code><a href="make_plot_bouquet_interactive.html">make_plot_bouquet_interactive()</a></code> for a plotly hover tooltip version.</p></div>
     </div>
 
     <div class="section level2">
@@ -308,44 +322,26 @@ paths using similar binary-direction rules.</p></div>
 <span class="r-in"><span><span class="co"># Minimal call</span></span></span>
 <span class="r-in"><span><span class="fu">make_plot_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
 <span class="r-in"><span>  time_col <span class="op">=</span> <span class="va">week</span>, series_col <span class="op">=</span> <span class="va">station</span>, value_col <span class="op">=</span> <span class="va">level_m</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> === Heading sweep per series (max - min of cumulative net steps) ===</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   bq_s      cum_net_range</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> Station A            13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> Station B            10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> Station C            26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Binding series : Station C (sweep = 26 steps)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Ceiling angle  : 13.85°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> theta (80%)  : 11.08°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bouquet_plot&gt;  3 series | theta = 11.1 deg | binding: Station C</span>
 <span class="r-plt img"><img src="make_plot_bouquet-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Column-driven colours and faceting</span></span></span>
-<span class="r-in"><span><span class="fu">make_plot_bouquet</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  data          <span class="op">=</span> <span class="va">gw_long</span>,</span></span>
-<span class="r-in"><span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span></span>
-<span class="r-in"><span>  series_col    <span class="op">=</span> <span class="va">station</span>,</span></span>
-<span class="r-in"><span>  value_col     <span class="op">=</span> <span class="va">level_m</span>,</span></span>
-<span class="r-in"><span>  stem_colors   <span class="op">=</span> <span class="va">region</span>,</span></span>
-<span class="r-in"><span>  flower_colors <span class="op">=</span> <span class="va">region</span>,</span></span>
-<span class="r-in"><span>  facet_by      <span class="op">=</span> <span class="va">region</span>,</span></span>
-<span class="r-in"><span>  title         <span class="op">=</span> <span class="st">"Groundwater Level Fluctuations \u2014 2023"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> === Heading sweep per series (max - min of cumulative net steps) ===</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 2</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   bq_s      cum_net_range</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> Station A            13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> Station B            10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> Station C            26</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Binding series : Station C (sweep = 26 steps)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Ceiling angle  : 13.85°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> theta (80%)  : 11.08°</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="co"># Highlight one station; others are dimmed</span></span></span>
+<span class="r-in"><span><span class="fu">make_plot_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
+<span class="r-in"><span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span></span>
+<span class="r-in"><span>  series_col <span class="op">=</span> <span class="va">station</span>,</span></span>
+<span class="r-in"><span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span></span>
+<span class="r-in"><span>  highlight  <span class="op">=</span> <span class="st">"Station A"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bouquet_plot&gt;  3 series | theta = 11.1 deg | binding: Station C</span>
 <span class="r-plt img"><img src="make_plot_bouquet-2.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Normalised mode: each series uses the full angular range</span></span></span>
+<span class="r-in"><span><span class="fu">make_plot_bouquet</span><span class="op">(</span><span class="va">gw_long</span>,</span></span>
+<span class="r-in"><span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span></span>
+<span class="r-in"><span>  series_col <span class="op">=</span> <span class="va">station</span>,</span></span>
+<span class="r-in"><span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span></span>
+<span class="r-in"><span>  normalise  <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bouquet_plot&gt;  3 series | theta = 11.1 deg | binding: Station C [normalised]</span>
+<span class="r-plt img"><img src="make_plot_bouquet-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
