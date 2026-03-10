@@ -336,7 +336,8 @@
 
   if (use_blend) {
     p <- p +
-      ggblend::blend(list(outline_layer, color_layer), "multiply") +
+      ggblend::blend(outline_layer, "multiply") +
+      ggblend::blend(color_layer,   "multiply") +
       ggplot2::scale_color_identity()
   } else {
     p <- p + outline_layer + color_layer + ggplot2::scale_color_identity()
