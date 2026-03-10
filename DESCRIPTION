@@ -2,8 +2,8 @@ Package: bouquets
 Title: Angular Accumulation Plots for Time Series
 Version: 0.1.0
 Authors@R:
-    person("First", "Last", , "blabla@posteo.de", role = c("aut", "cre"),
-           comment = c(ORCID = ""))
+    person("Max", "Nölscher", , "max-n@posteo.de", role = c("aut", "cre"),
+           comment = c(ORCID = "https://orcid.org/0000-0001-5606-1900"))
 Description: Creates angular accumulation ("bouquet") plots for collections
     of time series. Each series is encoded as a sequence of signed directional
     steps and drawn as a turtle-graphics path that turns left on increases and
