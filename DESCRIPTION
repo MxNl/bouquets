@@ -2,15 +2,18 @@ Package: bouquets
 Title: Angular Accumulation Plots for Time Series
 Version: 0.1.0
 Authors@R:
-    person("First", "Last", , "max-n@posteo.de", role = c("aut", "cre"),
+    person("First", "Last", , "blabla@posteo.de", role = c("aut", "cre"),
            comment = c(ORCID = ""))
 Description: Creates angular accumulation ("bouquet") plots for collections
     of time series. Each series is encoded as a sequence of signed directional
     steps and drawn as a turtle-graphics path that turns left on increases and
     right on decreases. All series share a common origin and angle, so visual
     pattern similarity directly reflects similarity in directional dynamics.
-    Companion functions cluster series by directional similarity and
-    optionally attach a geographic location map to the plot.
+    Companion functions cluster series by directional similarity (with S3
+    summary and quality-plot helpers), highlight individual series, filter by
+    time window, normalise per-series angles, and optionally attach a
+    geographic location map with cluster hull overlays. An interactive plotly
+    version with hover tooltips is also provided.
 License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -25,14 +28,17 @@ Imports:
     stats,
     tibble
 Suggests:
+    ggblend,
     knitr,
     mapdata,
     maps,
     patchwork,
+    plotly,
     rmarkdown,
     sf,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/MxNl/bouquets, https://mxnl.github.io/bouquets/
+URL: https://github.com/MxNl/bouquets, https://MxNl.github.io/bouquets/
 BugReports: https://github.com/MxNl/bouquets/issues

@@ -5,9 +5,14 @@
 #' (\eqn{+1} increase, \eqn{-1} decrease, \eqn{0} no change) and clusters
 #' the series based on the similarity of those sequences. The resulting
 #' `cluster` column can be passed directly to [make_plot_bouquet()] via
-#' `stem_colors`, `flower_colors`, or `facet_by`.
+#' `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
 #'
-#' @param data A long-format data frame or tibble — the same format expected
+#' The returned object is both the original `data` tibble (with an added
+#' cluster column) **and** a `cluster_bouquet` S3 object. Call
+#' [summary.cluster_bouquet()] on it to print a structured report of cluster
+#' quality, sizes, and member series.
+#'
+#' @param data A long-format data frame or tibble -- the same format expected
 #'   by [make_plot_bouquet()].
 #' @param time_col <[`tidy-select`][dplyr::dplyr_tidy_select]> The time index
 #'   column. Defaults to the first column.
@@ -17,111 +22,71 @@
 #'   value column. Defaults to the third column.
 #' @param k Either a positive integer specifying the number of clusters, or
 #'   `"auto"` (default) to select the optimal number by maximising the
-#'   composite silhouette score across `k = 2, …, k_max`.
-#' @param k_max A single positive integer. The upper bound considered when
-#'   `k = "auto"`. Capped internally at `n_series - 1`. Defaults to `8L`.
+#'   composite silhouette score across `k = 2, ..., k_max`.
+#' @param k_max A single positive integer. Upper bound considered when
+#'   `k = "auto"`. Capped at `n_series - 1`. Defaults to `8L`.
 #' @param method The clustering algorithm. One of:
 #'   \describe{
-#'     \item{`"pca_hclust"`}{(Default) Projects direction sequences onto their
-#'       principal components retaining `pca_variance` of variance, then
-#'       applies agglomerative hierarchical clustering with Ward's D2 linkage
-#'       in that space. The PCA step removes noise dimensions that dilute
-#'       cluster separation in long series. Deterministic; no extra packages
-#'       required. The `distance` argument does not apply — distance is always
-#'       Euclidean in PCA space.}
-#'     \item{`"pca_kmeans"`}{PCA projection followed by k-means. Faster for
-#'       large numbers of series; non-deterministic (set a seed for
-#'       reproducibility). The `distance` argument does not apply.}
-#'     \item{`"hclust"`}{Hierarchical clustering with Ward's D2 directly on
-#'       the direction sequences, using the `distance` metric. Best for short
-#'       series (< ~50 steps) where the raw sequence distance is meaningful.}
-#'     \item{`"kmeans"`}{k-means directly on the direction sequences. The
-#'       `distance` argument does not apply (k-means always uses Euclidean
-#'       internally). Suitable for short series with many observations.}
-#'     \item{`"pam"`}{Partitioning Around Medoids using the `distance` metric.
-#'       More robust to outlier series than k-means because cluster centres are
-#'       always real observations. Requires the \pkg{cluster} package.}
+#'     \item{`"pca_hclust"`}{(Default) PCA projection followed by agglomerative
+#'       hierarchical clustering with Ward's D2. Deterministic; no extra
+#'       packages required. The `distance` argument does not apply.}
+#'     \item{`"pca_kmeans"`}{PCA projection followed by k-means. Set `seed`
+#'       for reproducibility. The `distance` argument does not apply.}
+#'     \item{`"hclust"`}{Ward's D2 hierarchical clustering directly on the
+#'       direction sequences using the `distance` metric. Best for short series.}
+#'     \item{`"kmeans"`}{k-means on the direction sequences. Always uses
+#'       Euclidean distance internally. Set `seed` for reproducibility.}
+#'     \item{`"pam"`}{Partitioning Around Medoids. More robust to outliers.
+#'       Requires the \pkg{cluster} package.}
 #'   }
-#' @param distance The distance metric applied to the raw direction sequences.
-#'   One of:
-#'   \describe{
-#'     \item{`"euclidean"`}{(Default) Penalises step-by-step disagreements
-#'       between sequences.}
-#'     \item{`"correlation"`}{Converts Pearson correlation to a distance as
-#'       \eqn{1 - r}, measuring whether series *co-move* in their ups and
-#'       downs regardless of their absolute patterns. Often the most
-#'       meaningful metric for hydrological series.}
-#'     \item{`"manhattan"`}{Sum of absolute step differences. Less sensitive
-#'       to occasional large divergences than Euclidean.}
-#'   }
-#'   **Note**: only applied by `"hclust"` and `"pam"`. The PCA methods
-#'   always use Euclidean distance in the reduced space; k-means has no
-#'   distance argument by design.
-#' @param resolution A non-negative number controlling the preference for
-#'   more vs fewer clusters during automatic k selection. The composite score
-#'   is:
+#' @param distance Distance metric for `"hclust"` and `"pam"`. One of
+#'   `"euclidean"` (default), `"correlation"` (\eqn{1 - r}), or `"manhattan"`.
+#'   Not used by PCA methods or `"kmeans"`.
+#' @param resolution A non-negative number. Composite k-selection score:
+#'   \eqn{\bar{s}(k) \times \min_c \bar{s}_c(k) \times k^{\text{resolution}}}.
+#'   Higher values favour finer clusters. `0` = plain mean silhouette.
+#'   Default `0.5`.
+#' @param pca_variance Cumulative variance retained during PCA. Only used by
+#'   `"pca_hclust"` and `"pca_kmeans"`. Default `0.90`.
+#' @param cluster_col String. Name of the cluster column added to `data`.
+#'   Default `"cluster"`.
+#' @param seed Integer or `NULL`. Random seed passed to [base::set.seed()]
+#'   before k-means initialisation. Ensures reproducible results for
+#'   `"pca_kmeans"` and `"kmeans"`. `NULL` = no seed (non-reproducible).
+#'   Default `42L`.
+#' @param verbose Logical. Print k selection table, chosen k, silhouette score,
+#'   and cluster sizes. Default `FALSE`.
 #'
-#'   \deqn{\text{score}(k) = \bar{s}(k) \times \min_c \bar{s}_c(k) \times
-#'   k^{\text{resolution}}}
-#'
-#'   where \eqn{\bar{s}(k)} is the overall mean silhouette width and
-#'   \eqn{\min_c \bar{s}_c(k)} is the mean silhouette of the *worst* cluster.
-#'   Increasing `resolution` rewards finer groupings as long as all clusters
-#'   remain well-defined. `resolution = 0` falls back to plain mean
-#'   silhouette. Defaults to `0.5`.
-#' @param pca_variance A number in `(0, 1]`. The cumulative proportion of
-#'   variance to retain during PCA compression. Only used by `"pca_hclust"`
-#'   and `"pca_kmeans"`. Defaults to `0.90`.
-#' @param cluster_col A string. The name of the column added to `data`.
-#'   Defaults to `"cluster"`.
-#' @param verbose Logical. Whether to print the k selection table, chosen k,
-#'   mean silhouette, and cluster sizes. Defaults to `TRUE`.
-#'
-#' @return The original `data` tibble with one additional factor column named
-#'   by `cluster_col`. Levels are `"C1"`, `"C2"`, … ordered by decreasing
-#'   cluster size.
+#' @return The original `data` tibble with one additional factor column (named
+#'   by `cluster_col`, levels `"C1"`, `"C2"`, ... ordered by decreasing size)
+#'   plus a `cluster_bouquet` S3 class. The object also carries a `bq_meta`
+#'   attribute containing all clustering diagnostics; use
+#'   [summary.cluster_bouquet()] to print them.
 #'
 #' @details
 #' ## Feature representation
 #' Each series of length \eqn{n} is represented as a vector of \eqn{n - 1}
-#' signed steps \eqn{d_i \in \{-1, 0, +1\}}. These form the rows of a
-#' feature matrix \eqn{M \in \mathbb{R}^{n_\text{series} \times (n-1)}}.
+#' signed steps \eqn{d_i \in \{-1, 0, +1\}}.
 #'
-#' ## Which method and distance to choose
-#' For typical hydrological series (weekly to daily, many years):
-#' \itemize{
-#'   \item Start with `"pca_hclust"` (default). PCA compression removes the
-#'     noise that makes long raw sequences hard to separate.
-#'   \item If you suspect the series differ mainly in *co-movement* rather
-#'     than exact pattern, try `method = "hclust", distance = "correlation"`.
-#'     This is often the most geologically meaningful choice.
-#'   \item Use `"pam"` when you want cluster representatives to be real
-#'     observed series that you can point to in the data.
-#' }
-#'
-#' ## Composite k-selection score
+#' ## Composite k-selection
 #' Plain mean silhouette consistently selects k = 2 because two large blobs
-#' almost always score well globally even when finer structure exists. The
-#' composite score adds two corrections: the worst-cluster term
-#' \eqn{\min_c \bar{s}_c(k)} kills solutions where one cluster is
-#' ill-defined, and the resolution exponent \eqn{k^\text{resolution}} rewards
-#' cleaner solutions at higher k.
+#' score globally well even when finer structure exists. The composite score
+#' adds a worst-cluster penalty and a resolution exponent.
 #'
 #' ## Pairing with `make_plot_bouquet()`
 #' ```r
 #' data |>
 #'   cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
 #'   make_plot_bouquet(
-#'     time_col      = date,
-#'     series_col    = id,
-#'     value_col     = gwl,
-#'     stem_colors   = cluster,
-#'     flower_colors = cluster,
-#'     facet_by      = cluster
+#'     time_col      = date,   series_col    = id,   value_col = gwl,
+#'     stem_colors   = cluster, flower_colors = cluster,
+#'     lon_col = lon, lat_col = lat, cluster_hull = cluster
 #'   )
 #' ```
 #'
 #' @seealso [make_plot_bouquet()] for visualising the result.
+#'   [summary.cluster_bouquet()] for a structured quality report.
+#'   [plot_cluster_quality()] to plot silhouette scores across k.
 #'
 #' @examples
 #' set.seed(42)
@@ -146,38 +111,15 @@
 #' clustered <- cluster_bouquet(gw_long,
 #'   time_col = week, series_col = station, value_col = level_m)
 #'
-#' # Correlation distance with hclust — often best for hydrological series
-#' clustered_corr <- cluster_bouquet(gw_long,
-#'   time_col   = week,
-#'   series_col = station,
-#'   value_col  = level_m,
-#'   method     = "hclust",
-#'   distance   = "correlation"
-#' )
+#' # Inspect the result
+#' summary(clustered)
 #'
-#' # Increase resolution to push toward finer, cleaner clusters
-#' clustered_fine <- cluster_bouquet(gw_long,
-#'   time_col   = week,
-#'   series_col = station,
-#'   value_col  = level_m,
-#'   resolution = 1.5
-#' )
-#'
-#' # Visualise — colour and facet by cluster
+#' # Plot silhouette scores across k to inspect the elbow
 #' \donttest{
-#' make_plot_bouquet(clustered,
-#'   time_col      = week,
-#'   series_col    = station,
-#'   value_col     = level_m,
-#'   stem_colors   = cluster,
-#'   flower_colors = cluster,
-#'   facet_by      = cluster,
-#'   title         = "Groundwater Stations by Directional Cluster"
-#' )
+#' plot_cluster_quality(clustered)
 #' }
 #'
 #' @export
-#'
 #' @importFrom dplyr all_of case_when filter group_by left_join mutate rename
 #'   row_number select ungroup .data
 #' @importFrom rlang ':='
@@ -195,12 +137,13 @@ cluster_bouquet <- function(
     resolution   = 0.5,
     pca_variance = 0.90,
     cluster_col  = "cluster",
-    verbose      = TRUE) {
+    seed         = 42L,
+    verbose      = FALSE) {
 
   method   <- match.arg(method)
   distance <- match.arg(distance)
 
-  # ── Validate inputs ────────────────────────────────────────────────────────
+  # -- Validate inputs ----------------------------------------------------------
   if (!is.data.frame(data))
     stop("`data` must be a data frame or tibble.", call. = FALSE)
 
@@ -228,33 +171,24 @@ cluster_bouquet <- function(
   if (!is.logical(verbose) || length(verbose) != 1L)
     stop("`verbose` must be TRUE or FALSE.", call. = FALSE)
 
+  if (!is.null(seed) && (!is.numeric(seed) || length(seed) != 1L))
+    stop("`seed` must be a single integer or NULL.", call. = FALSE)
+
   if (method == "pam" && !requireNamespace("cluster", quietly = TRUE))
-    stop(
-      'method = "pam" requires the cluster package. ',
-      'Install it with install.packages("cluster").',
-      call. = FALSE
-    )
+    stop('method = "pam" requires the cluster package. ',
+         'Install it with install.packages("cluster").', call. = FALSE)
 
   # Warn when distance is set but will have no effect
   distance_unused <- startsWith(method, "pca_") || method == "kmeans"
   if (distance_unused && distance != "euclidean")
-    warning(
-      sprintf(
-        '`distance = "%s"` has no effect for method = "%s". ',
-        distance, method
-      ),
-      "Distance is always Euclidean for PCA methods; ",
-      "k-means has no distance argument by design.",
-      call. = FALSE
-    )
+    warning(sprintf('`distance = "%s"` has no effect for method = "%s".',
+                    distance, method), call. = FALSE)
 
   if (cluster_col %in% names(data))
-    warning(
-      sprintf('Column "%s" already exists and will be overwritten.', cluster_col),
-      call. = FALSE
-    )
+    warning(sprintf('Column "%s" already exists and will be overwritten.',
+                    cluster_col), call. = FALSE)
 
-  # ── Resolve column names ───────────────────────────────────────────────────
+  # -- Resolve column names -----------------------------------------------------
   time_col_name   <- names(dplyr::select(data, {{ time_col }}))[1L]
   series_col_name <- names(dplyr::select(data, {{ series_col }}))[1L]
   value_col_name  <- names(dplyr::select(data, {{ value_col }}))[1L]
@@ -262,8 +196,7 @@ cluster_bouquet <- function(
   if (!is.numeric(data[[value_col_name]]))
     stop(sprintf("Column '%s' must be numeric.", value_col_name), call. = FALSE)
 
-  # ── Build direction-sequence feature matrix ────────────────────────────────
-  # Each series → a row of signed steps (+1 / -1 / 0), length n_steps - 1.
+  # -- Build direction-sequence feature matrix ----------------------------------
   dir_long <- data |>
     dplyr::rename(
       bq_t = dplyr::all_of(time_col_name),
@@ -291,213 +224,360 @@ cluster_bouquet <- function(
   n_features   <- n_steps - 1L
 
   if (n_series < 3L)
-    stop("At least 3 series are required for meaningful clustering.",
-         call. = FALSE)
+    stop("At least 3 series are required for meaningful clustering.", call. = FALSE)
 
-  # Build matrix without a tidyr dependency
-  feat_mat <- matrix(
-    0L,
-    nrow     = n_series,
-    ncol     = n_features,
-    dimnames = list(series_names, NULL)
-  )
+  feat_mat <- matrix(0L, nrow = n_series, ncol = n_features,
+                     dimnames = list(series_names, NULL))
   for (sn in series_names) {
     rows           <- dir_long[dir_long$bq_s == sn, ]
     feat_mat[sn, ] <- rows$dir[order(rows$step)]
   }
 
-  # ── Distance matrix on raw features (used by hclust, pam, silhouette) ─────
+  # -- Distance matrix ----------------------------------------------------------
   dist_mat <- .bouquet_dist(feat_mat, distance)
 
-  # ── PCA compression (pca_* methods only) ──────────────────────────────────
-  # Distance in PCA space is always Euclidean — the distance argument does
-  # not apply after the feature space has been reorganised by PCA.
+  # -- PCA compression ----------------------------------------------------------
   feat_clust <- if (startsWith(method, "pca_")) {
     .pca_compress(feat_mat, pca_variance, verbose)
   } else {
     feat_mat
   }
 
-  # Distance used for clustering (PCA methods use their own Euclidean dist)
   dist_clust <- if (startsWith(method, "pca_")) {
     stats::dist(feat_clust, method = "euclidean")
   } else {
     dist_mat
   }
 
-  # ── Determine k ───────────────────────────────────────────────────────────
+  # -- Determine k --------------------------------------------------------------
   k_max_eff <- min(k_max, n_series - 1L)
 
+  score_tbl <- NULL   # will be filled when k = "auto"
+
   if (identical(k, "auto")) {
-    k <- .select_k_bouquet(
+    result <- .select_k_bouquet(
       feat_clust = feat_clust,
       dist_clust = dist_clust,
-      dist_sil   = dist_mat,    # silhouette always in original feature space
+      dist_sil   = dist_mat,
       method     = method,
       k_max      = k_max_eff,
       res        = resolution,
-      verbose    = verbose
+      verbose    = verbose,
+      seed       = seed
     )
+    k         <- result$k
+    score_tbl <- result$score_tbl
   } else {
     if (k > n_series - 1L)
-      stop(
-        sprintf("`k` (%d) must be less than the number of series (%d).",
-                k, n_series),
-        call. = FALSE
-      )
+      stop(sprintf("`k` (%d) must be less than the number of series (%d).",
+                   k, n_series), call. = FALSE)
   }
 
-  # ── Cluster ───────────────────────────────────────────────────────────────
+  # -- Cluster ------------------------------------------------------------------
+  if (!is.null(seed)) set.seed(seed)
   labels <- .run_clustering_bouquet(feat_clust, dist_clust, k, method)
 
-  # ── Relabel C1, C2, … by decreasing cluster size ─────────────────────────
+  # -- Relabel C1, C2, ... by decreasing cluster size ---------------------------
   size_order    <- names(sort(table(labels), decreasing = TRUE))
-  rank_map      <- stats::setNames(paste0("C", seq_along(size_order)),
-                                   size_order)
-  labels_factor <- factor(
-    rank_map[as.character(labels)],
-    levels = paste0("C", seq_len(k))
+  rank_map      <- stats::setNames(paste0("C", seq_along(size_order)), size_order)
+  labels_factor <- factor(rank_map[as.character(labels)],
+                          levels = paste0("C", seq_len(k)))
+
+  # -- Silhouette diagnostics ---------------------------------------------------
+  sil_obj  <- cluster::silhouette(as.integer(labels_factor), dist_mat)
+  mean_sil <- mean(sil_obj[, "sil_width"])
+  sil_tbl  <- data.frame(
+    series  = series_names,
+    cluster = as.character(labels_factor),
+    sil     = sil_obj[, "sil_width"],
+    stringsAsFactors = FALSE
   )
 
-  # ── Report ─────────────────────────────────────────────────────────────────
+  sizes    <- table(labels_factor)
+  members  <- split(series_names, labels_factor)
+
+  # -- Verbose output ------------------------------------------------------------
   if (verbose) {
-    sil      <- cluster::silhouette(as.integer(labels_factor), dist_mat)
-    mean_sil <- mean(sil[, "sil_width"])
-    sizes    <- table(labels_factor)
     cat(sprintf(
       "\ncluster_bouquet  |  method = %s  |  distance = %s\n",
       method, if (distance_unused) paste0(distance, " (unused)") else distance
     ))
-    cat(sprintf(
-      "k = %d  |  mean silhouette = %.3f  |  resolution = %.2f\n",
-      k, mean_sil, resolution
-    ))
+    cat(sprintf("k = %d  |  mean silhouette = %.3f  |  resolution = %.2f\n",
+                k, mean_sil, resolution))
     cat("Cluster sizes:\n")
     for (cl in names(sizes))
-      cat(sprintf("  %s : %d series\n", cl, sizes[[cl]]))
+      cat(sprintf("  %s : %d series (%s)\n", cl, sizes[[cl]],
+                  paste(members[[cl]], collapse = ", ")))
     cat("\n")
   }
 
-  # ── Join cluster labels back onto data ────────────────────────────────────
-  label_tbl            <- tibble::tibble(bq_s = series_names,
-                                         .cl  = labels_factor)
+  # -- Join cluster labels back onto data ---------------------------------------
+  label_tbl            <- tibble::tibble(bq_s = series_names, .cl = labels_factor)
   names(label_tbl)[2L] <- cluster_col
 
-  data |>
+  out <- data |>
     dplyr::rename(bq_s = dplyr::all_of(series_col_name)) |>
     dplyr::left_join(label_tbl, by = "bq_s") |>
     dplyr::rename(!!series_col_name := "bq_s")
+
+  # -- Attach S3 class and metadata ---------------------------------------------
+  attr(out, "bq_meta") <- list(
+    k            = k,
+    method       = method,
+    distance     = if (distance_unused) paste0(distance, " (unused)") else distance,
+    resolution   = resolution,
+    mean_sil     = mean_sil,
+    sizes        = sizes,
+    members      = members,
+    sil_tbl      = sil_tbl,
+    score_tbl    = score_tbl,
+    cluster_col  = cluster_col,
+    seed         = seed,
+    n_series     = n_series
+  )
+  class(out) <- c("cluster_bouquet", class(out))
+  out
 }
 
 
-# ── Unexported helpers ─────────────────────────────────────────────────────────
+# -- S3 methods -----------------------------------------------------------------
 
-#' Build a distance matrix from the raw feature matrix
+#' Summarise a cluster_bouquet result
 #'
-#' For `"correlation"`, converts Pearson r to distance as `1 - r`.
+#' Prints a structured report of the clustering: method, k selection scores
+#' (when k was chosen automatically), silhouette quality, cluster sizes, and
+#' per-series silhouette widths.
+#'
+#' @param object A `cluster_bouquet` object returned by [cluster_bouquet()].
+#' @param ... Unused; present for S3 compatibility.
+#'
+#' @return `object`, invisibly (so the result can still be piped).
+#'
+#' @examples
+#' set.seed(42)
+#' n <- 52L
+#' gw <- tibble::tibble(
+#'   week    = rep(seq(as.Date("2023-01-01"), by = "week", length.out = n), 4L),
+#'   station = rep(paste0("S", 1:4), each = n),
+#'   level   = c(cumsum(rnorm(n)), cumsum(rnorm(n)),
+#'               cumsum(rnorm(n)), cumsum(rnorm(n)))
+#' )
+#' summary(cluster_bouquet(gw, week, station, level))
+#'
+#' @export
+summary.cluster_bouquet <- function(object, ...) {
+  m <- attr(object, "bq_meta")
+  if (is.null(m)) {
+    cat("No cluster_bouquet metadata found.\n")
+    return(invisible(object))
+  }
+
+  cat("-- cluster_bouquet summary ----------------------------------------------\n")
+  cat(sprintf("  Method    : %s\n", m$method))
+  cat(sprintf("  Distance  : %s\n", m$distance))
+  cat(sprintf("  Seed      : %s\n", if (is.null(m$seed)) "none" else m$seed))
+  cat(sprintf("  Series    : %d   k = %d   Resolution = %.2f\n",
+              m$n_series, m$k, m$resolution))
+  cat(sprintf("  Mean silhouette : %.3f  ", m$mean_sil))
+  cat(dplyr::case_when(
+    m$mean_sil >= 0.50 ~ "(strong structure)\n",
+    m$mean_sil >= 0.25 ~ "(reasonable structure)\n",
+    TRUE               ~ "(weak structure -- consider more data or fewer clusters)\n"
+  ))
+
+  if (!is.null(m$score_tbl)) {
+    cat("\n  Auto k selection (composite silhouette score):\n")
+    for (i in seq_len(nrow(m$score_tbl))) {
+      row <- m$score_tbl[i, ]
+      cat(sprintf("    k = %d : %.4f%s\n", row$k, row$score,
+                  if (row$k == m$k) "  <-- selected" else ""))
+    }
+  }
+
+  cat("\n  Cluster sizes and members:\n")
+  for (cl in names(m$members)) {
+    sil_cl <- mean(m$sil_tbl$sil[m$sil_tbl$cluster == cl])
+    cat(sprintf("    %s  (%d series, mean sil = %.3f)\n",
+                cl, length(m$members[[cl]]), sil_cl))
+    cat(sprintf("       %s\n", paste(m$members[[cl]], collapse = ", ")))
+  }
+
+  cat("\n  Per-series silhouette widths:\n")
+  sil_sorted <- m$sil_tbl[order(m$sil_tbl$cluster, -m$sil_tbl$sil), ]
+  for (i in seq_len(nrow(sil_sorted))) {
+    r <- sil_sorted[i, ]
+    bar <- strrep("|", max(0L, round(r$sil * 20)))
+    cat(sprintf("    %-20s  %s  %6.3f  %s\n",
+                r$series, r$cluster, r$sil, bar))
+  }
+  cat("------------------------------------------------------------------------\n")
+  invisible(object)
+}
+
+
+#' Plot silhouette scores across k values for a cluster_bouquet result
+#'
+#' Draws a bar chart of the composite silhouette score (or plain mean
+#' silhouette if `resolution = 0`) across all candidate k values evaluated
+#' during automatic k selection. The selected k is highlighted. Use this to
+#' inspect the elbow and decide whether a different k might be preferable.
+#'
+#' This function requires that [cluster_bouquet()] was called with
+#' `k = "auto"` -- if a fixed k was supplied there are no scores to plot.
+#'
+#' @param x A `cluster_bouquet` object returned by [cluster_bouquet()].
+#' @param dark_mode Logical. Match the dark background of [make_plot_bouquet()].
+#'   Default `FALSE`.
+#'
+#' @return A [ggplot2::ggplot] object (invisibly), also printed to the device.
+#'
+#' @examples
+#' \donttest{
+#' set.seed(42)
+#' n <- 52L
+#' gw <- tibble::tibble(
+#'   week    = rep(seq(as.Date("2023-01-01"), by = "week", length.out = n), 6L),
+#'   station = rep(paste0("S", 1:6), each = n),
+#'   level   = c(cumsum(rnorm(n)), cumsum(rnorm(n)), cumsum(rnorm(n)),
+#'               cumsum(rnorm(n)), cumsum(rnorm(n)), cumsum(rnorm(n)))
+#' )
+#' result <- cluster_bouquet(gw, week, station, level)
+#' plot_cluster_quality(result)
+#' }
+#'
+#' @export
+#' @importFrom ggplot2 aes element_blank element_rect element_text geom_bar
+#'   geom_text ggplot labs margin scale_fill_manual theme theme_minimal
+plot_cluster_quality <- function(x, dark_mode = FALSE) {
+  if (!inherits(x, "cluster_bouquet"))
+    stop("`x` must be a cluster_bouquet object returned by cluster_bouquet().",
+         call. = FALSE)
+  m <- attr(x, "bq_meta")
+  if (is.null(m$score_tbl))
+    stop(
+      "No k-selection scores found. ",
+      "plot_cluster_quality() requires cluster_bouquet() to have been called ",
+      "with k = \"auto\".",
+      call. = FALSE
+    )
+
+  df <- m$score_tbl
+  df$selected <- df$k == m$k
+
+  bg_col      <- if (dark_mode) "#1a1a2e" else "#f8f8f5"
+  text_col    <- if (dark_mode) "white"   else "#1a1a2e"
+  sub_col     <- if (dark_mode) "grey60"  else "grey40"
+  bar_default <- if (dark_mode) "#3a7d2c" else "#52a85e"
+  bar_sel     <- "#f472b6"
+
+  p <- ggplot2::ggplot(df, ggplot2::aes(
+    x    = factor(.data$k),
+    y    = .data$score,
+    fill = .data$selected
+  )) +
+    ggplot2::geom_bar(stat = "identity", width = 0.6) +
+    ggplot2::geom_text(
+      ggplot2::aes(label = sprintf("%.3f", .data$score)),
+      vjust = -0.4, size = 3.2, color = sub_col
+    ) +
+    ggplot2::scale_fill_manual(
+      values = c("FALSE" = bar_default, "TRUE" = bar_sel),
+      guide  = "none"
+    ) +
+    ggplot2::labs(
+      title    = "Cluster quality across k",
+      subtitle = sprintf(
+        "method = %s | distance = %s | resolution = %.2f | selected k = %d",
+        m$method, m$distance, m$resolution, m$k
+      ),
+      x = "Number of clusters (k)",
+      y = "Composite silhouette score"
+    ) +
+    ggplot2::theme_minimal(base_family = "sans") +
+    ggplot2::theme(
+      plot.background  = ggplot2::element_rect(fill = bg_col, color = NA),
+      panel.background = ggplot2::element_rect(fill = bg_col, color = NA),
+      plot.title       = ggplot2::element_text(color = text_col, size = 14,
+                                               margin = ggplot2::margin(b = 4)),
+      plot.subtitle    = ggplot2::element_text(color = sub_col, size = 9,
+                                               margin = ggplot2::margin(b = 10)),
+      axis.title       = ggplot2::element_text(color = sub_col, size = 10),
+      axis.text        = ggplot2::element_text(color = sub_col, size = 10),
+      panel.grid.major.x = ggplot2::element_blank(),
+      plot.margin      = ggplot2::margin(20, 20, 15, 20)
+    )
+
+  print(p)
+  invisible(p)
+}
+
+
+# -- Unexported helpers ---------------------------------------------------------
+
 #' @noRd
 .bouquet_dist <- function(feat_mat, distance) {
   if (distance == "correlation") {
     r   <- stats::cor(t(feat_mat))
-    r[] <- pmax(-1, pmin(1, r))   # guard against floating-point drift
-    as.dist(1 - r)
+    r[] <- pmax(-1, pmin(1, r))
+    stats::as.dist(1 - r)
   } else {
     stats::dist(feat_mat,
                 method = if (distance == "manhattan") "manhattan" else "euclidean")
   }
 }
 
-
-#' Compress feature matrix via PCA
-#'
-#' Retains the minimum number of components (at least 2) needed to explain
-#' `pca_variance` of total variance.
 #' @noRd
 .pca_compress <- function(feat_mat, pca_variance, verbose) {
   pca     <- stats::prcomp(feat_mat, center = TRUE, scale. = FALSE)
   cum_var <- cumsum(pca$sdev^2) / sum(pca$sdev^2)
   n_comp  <- max(2L, which(cum_var >= pca_variance)[1L])
-
   if (verbose)
-    cat(sprintf(
-      "PCA: retaining %d / %d components (%.0f%% variance explained)\n",
-      n_comp, ncol(feat_mat), cum_var[n_comp] * 100
-    ))
-
+    cat(sprintf("PCA: retaining %d / %d components (%.0f%% variance explained)\n",
+                n_comp, ncol(feat_mat), cum_var[n_comp] * 100))
   pca$x[, seq_len(n_comp), drop = FALSE]
 }
 
-
-#' Run one clustering pass and return an integer label vector
-#'
-#' `feat_clust` is the feature matrix (raw or PCA-compressed).
-#' `dist_clust` is the pre-computed distance for that feature space.
 #' @noRd
 .run_clustering_bouquet <- function(feat_clust, dist_clust, k, method) {
   switch(method,
     pca_hclust = ,
-    hclust     = {
-      stats::cutree(
-        stats::hclust(dist_clust, method = "ward.D2"),
-        k = k
-      )
-    },
+    hclust     = stats::cutree(stats::hclust(dist_clust, method = "ward.D2"), k = k),
     pca_kmeans = ,
-    kmeans     = {
-      stats::kmeans(feat_clust, centers = k,
-                    nstart = 25L, iter.max = 100L)$cluster
-    },
-    pam = {
-      cluster::pam(dist_clust, k = k, diss = TRUE)$clustering
-    }
+    kmeans     = stats::kmeans(feat_clust, centers = k,
+                               nstart = 25L, iter.max = 100L)$cluster,
+    pam        = cluster::pam(dist_clust, k = k, diss = TRUE)$clustering
   )
 }
 
-
-#' Composite silhouette score that favours clean, well-separated clusters
-#'
-#' score(k) = mean_sil(k) * min_cluster_sil(k) * k^resolution
-#'
-#' The worst-cluster term kills solutions where any one cluster is
-#' ill-defined. The resolution exponent rewards finer groupings as long as
-#' all clusters remain well-separated. Silhouette is always computed in the
-#' original (non-PCA) feature space so comparisons across k are consistent.
 #' @noRd
 .composite_score <- function(labels, dist_sil, resolution) {
   if (length(unique(labels)) < 2L) return(-Inf)
-
   sil        <- cluster::silhouette(labels, dist_sil)[, "sil_width"]
   mean_sil   <- mean(sil)
   cl_means   <- tapply(sil, labels, mean)
   min_cl_sil <- min(cl_means)
-
-  # Avoid spurious positive scores from two negatives multiplying
   if (mean_sil <= 0 || min_cl_sil <= 0) return(mean_sil)
-
   mean_sil * min_cl_sil * length(unique(labels))^resolution
 }
 
-
-#' Select optimal k via composite silhouette score
 #' @noRd
 .select_k_bouquet <- function(feat_clust, dist_clust, dist_sil,
-                               method, k_max, res, verbose) {
+                               method, k_max, res, verbose, seed) {
   scores <- numeric(k_max - 1L)
-
   for (ki in seq(2L, k_max)) {
+    if (!is.null(seed)) set.seed(seed)
     labels          <- .run_clustering_bouquet(feat_clust, dist_clust, ki, method)
     scores[ki - 1L] <- .composite_score(as.integer(labels), dist_sil, res)
   }
-
-  best_k <- which.max(scores) + 1L
+  best_k    <- which.max(scores) + 1L
+  score_tbl <- data.frame(k = seq(2L, k_max), score = scores)
 
   if (verbose) {
     cat("\nAuto k selection (composite silhouette score):\n")
     for (ki in seq(2L, k_max))
-      cat(sprintf("  k = %d : %.4f%s\n",
-                  ki, scores[ki - 1L],
+      cat(sprintf("  k = %d : %.4f%s\n", ki, scores[ki - 1L],
                   if (ki == best_k) " <-- selected" else ""))
   }
 
-  best_k
+  list(k = best_k, score_tbl = score_tbl)
 }

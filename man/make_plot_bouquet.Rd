@@ -24,115 +24,138 @@ make_plot_bouquet(
   lat_col = NULL,
   map_width = 0.35,
   coord_crs = NULL,
-  verbose = TRUE
+  cluster_hull = NULL,
+  hull_coverage = 1,
+  blend = TRUE,
+  highlight = NULL,
+  from = NULL,
+  to = NULL,
+  normalise = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
 \item{data}{A long-format data frame or tibble with at minimum a time
 column, a series identifier column, and a numeric value column. Additional
 factor or character columns may be referenced by \code{stem_colors},
-\code{flower_colors}, and \code{facet_by}.}
+\code{flower_colors}, \code{facet_by}, and \code{cluster_hull}.}
 
 \item{time_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The time index
 column. Defaults to the first column.}
 
 \item{series_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The column
-identifying each individual time series (e.g. a station name).
-Defaults to the second column.}
+identifying each individual time series. Defaults to the second column.}
 
 \item{value_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The numeric
-column containing the measured values. Defaults to the third column.}
+value column. Defaults to the third column.}
 
 \item{stem_colors}{Controls the colour of the time series lines. Four
 options are accepted:
 \itemize{
-\item A single hex string — all lines share that colour. Default:
+\item A single hex string -- all lines share that colour. Default:
 \code{"#3a7d2c"} (plant green).
-\item A character vector of hex strings, one per series — matched by
-position; recycled with a warning if too short.
-\item \code{"greens"} — each series receives a distinct shade from a curated
-palette of natural greens.
-\item A bare column name referencing a factor or character column in
-\code{data} — each series is coloured by that column's value.
+\item A character vector of hex strings, one per series -- recycled
+with a warning if too short.
+\item \code{"greens"} -- distinct shades from a curated palette of natural
+greens.
+\item A bare column name in \code{data} -- each series is coloured by that
+column's value using perceptually uniform colours.
 }}
 
-\item{flower_colors}{Controls the colour of the end-of-series ✿ symbols.
-Four options are accepted:
-\itemize{
-\item A single hex string — all flowers share that colour. Default:
-\code{"#f472b6"} (warm pink).
-\item A character vector of hex strings, one per series — matched by
-position; recycled with a warning if too short.
-\item \code{"blossom"} — each flower is assigned a colour from a curated
-palette of pinks, mauves, and soft corals.
-\item A bare column name referencing a factor or character column in
-\code{data} — each flower is coloured by that column's value.
-}}
+\item{flower_colors}{Controls the colour of the end-of-series flower
+symbols. Same four options as \code{stem_colors}. The keyword is \code{"blossom"}.
+Default: \code{"#f472b6"} (warm pink).}
 
-\item{facet_by}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> An optional
-bare column name referencing a factor or character column in \code{data}. When
-supplied the plot is split into facets via \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}, one
-panel per level. \code{NULL} (default) produces a single panel.}
+\item{facet_by}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional bare
+column name. When supplied the plot is split via \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}.
+\code{NULL} (default) = single panel.}
 
-\item{ceiling_pct}{A single number in \verb{(0, 1]}. The fraction of the
-theoretical maximum angle to use as \eqn{\theta}. Lower values give more
-visual headroom; higher values make turns more pronounced. Default \code{0.80}.}
+\item{ceiling_pct}{A single number in \verb{(0, 1]}. Fraction of the theoretical
+maximum angle to use as \eqn{\theta}. Default \code{0.80}.}
 
-\item{launch_deg}{A single number. The initial heading of all series in
-degrees, measured counter-clockwise from the positive x-axis. \code{90} points
-straight up (north). Defaults to \code{90}.}
+\item{launch_deg}{Initial heading in degrees (counter-clockwise from
+positive x-axis). \code{90} = straight up. Defaults to \code{90}.}
 
-\item{marker_every}{A positive integer. If supplied, a filled circle is
-plotted at every \code{marker_every}-th step to aid reading of temporal
-progress. \code{NULL} (default) suppresses markers.}
+\item{marker_every}{Positive integer. A dot is plotted at every
+\code{marker_every}-th step. \code{NULL} (default) = no markers.}
 
-\item{show_rings}{Logical. Whether to draw faint concentric reference rings
-centred on the origin. Defaults to \code{FALSE}.}
+\item{show_rings}{Logical. Draw faint concentric reference rings. Default
+\code{FALSE}.}
 
-\item{dark_mode}{Logical. \code{TRUE} uses a dark navy background; \code{FALSE}
-(default) uses a light off-white background.}
+\item{dark_mode}{Logical. \code{TRUE} = dark navy background. Default \code{FALSE}.}
 
-\item{title}{A string used as the plot title. \code{NULL} (default) = no title.}
+\item{title}{Plot title string. \code{NULL} (default) = no title.}
 
-\item{subtitle}{A string used as the subtitle. \code{NULL} (default)
-auto-generates a subtitle reporting \eqn{\theta}, the binding series, time
-range, and interval.}
+\item{subtitle}{Subtitle string. \code{NULL} (default) = auto-generated summary
+of theta, binding series, time range, and interval.}
 
-\item{hide_legend_after}{A single positive integer. The legend is suppressed
-when the number of series is greater than or equal to this value.
-Defaults to \code{10}.}
+\item{hide_legend_after}{Positive integer. Legend is suppressed when
+\code{n_series >= hide_legend_after}. Default \code{10}.}
 
 \item{lon_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional bare
-column name containing the longitude of each series location (decimal
-degrees, WGS 84). Must be supplied together with \code{lat_col}. When both are
-provided a location map is attached to the right of the bouquet plot.
-\code{NULL} (default) = no map.}
+column name for longitude. Must be paired with \code{lat_col}. When both are
+provided a location map is attached to the right via patchwork.}
 
 \item{lat_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional bare
-column name containing the latitude. See \code{lon_col}.}
+column name for latitude. See \code{lon_col}.}
 
-\item{map_width}{Relative width of the location map panel as a fraction of
-the total combined width. A value of \code{0.35} means the map takes 35 \\% of
-the horizontal space and the bouquet takes 65 \\%. Only used when \code{lon_col}
-and \code{lat_col} are both provided. Defaults to \code{0.35}.}
+\item{map_width}{Relative width of the map panel as a fraction of the
+combined figure width. Only used when coordinates are supplied. Default
+\code{0.35}.}
 
-\item{coord_crs}{Integer or \code{NULL}. The EPSG code of the coordinate
-reference system used by \code{lon_col} and \code{lat_col}. When \code{NULL} (default)
-the function attempts to auto-detect the CRS from the coordinate
-magnitude. Supply an explicit code (e.g. \code{coord_crs = 3035} for
-ETRS89-LAEA, \code{coord_crs = 25832} for ETRS89-UTM32) whenever
-auto-detection gives wrong results. Decimal-degree coordinates
-(WGS84 / EPSG:4326) require no reprojection and this argument is ignored.}
+\item{coord_crs}{Integer EPSG code or \code{NULL}. CRS of \code{lon_col}/\code{lat_col}.
+\code{NULL} = auto-detect from coordinate magnitude. Decimal-degree WGS84
+coordinates require no reprojection.}
 
-\item{verbose}{Logical. Whether to print angle diagnostics to the console.
-Defaults to \code{TRUE}.}
+\item{cluster_hull}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> Optional
+bare column name containing cluster labels (e.g. the \code{cluster} column
+produced by \code{\link[=cluster_bouquet]{cluster_bouquet()}}). When supplied \strong{and} a location map is
+shown (via \code{lon_col}/\code{lat_col}), a smooth concave hull is drawn around
+each cluster's map points using \code{\link[ggforce:geom_mark_hull]{ggforce::geom_mark_hull()}} from the
+\pkg{ggforce} package. Hull fill colour matches the cluster's
+\code{flower_colors}. \code{NULL} (default) = no hulls.}
+
+\item{hull_coverage}{A single number in \verb{(0, 1]}. Fraction of each
+cluster's points (those closest to the cluster centroid) included when
+computing the hull. Values below \code{1} exclude outlier points so the hull
+focuses on the cluster's core area, which is useful when many clusters
+overlap. Default \code{1} = all points.}
+
+\item{blend}{Logical. When \code{TRUE} (default) and the \pkg{ggblend} package is
+installed, cluster hull fills are composited with the
+\code{"lighten"} blend mode and map points with \code{"multiply"}, giving perceptually
+richer colour mixing where hulls and points overlap. Falls back silently to
+normal alpha blending when \pkg{ggblend} is not available. Only affects
+the map panel; has no effect when no location map is shown.}
+
+\item{highlight}{A character vector of series names to emphasise. All other
+series are drawn in a pale grey at low opacity. \code{NULL} (default) = all
+series equally prominent.}
+
+\item{from}{Optional scalar of the same class as \code{time_col}. Observations
+before this value are dropped before computing paths. \code{NULL} = no filter.}
+
+\item{to}{Optional scalar of the same class as \code{time_col}. Observations
+after this value are dropped. \code{NULL} = no filter.}
+
+\item{normalise}{Logical. When \code{TRUE}, each series is assigned its own
+per-series \eqn{\theta} so that every series uses the full angular range
+independently of how volatile it is. This makes shape comparison easier
+when series have very different volatility. When \code{FALSE} (default) all
+series share a single global \eqn{\theta} derived from the most volatile
+series.}
+
+\item{verbose}{Logical. Print angle diagnostics to the console. Default
+\code{FALSE}.}
 }
 \value{
-When \code{lon_col} and \code{lat_col} are \code{NULL} (default), a
-\link[ggplot2:ggplot]{ggplot2::ggplot} object. When both coordinate columns are supplied, a
-\link[patchwork:patchwork-package]{patchwork} object combining the bouquet
-panel (left) and a location map (right); patchwork objects behave like
-ggplot objects for \code{print()}, \code{ggsave()}, and \code{+}.
+A \code{bouquet_plot} object. When \code{lon_col} and \code{lat_col} are \code{NULL},
+the underlying object is a \link[ggplot2:ggplot]{ggplot2::ggplot}. When coordinates are
+supplied, it is a \link[patchwork:patchwork-package]{patchwork} object (bouquet
+left, map right). Both are wrapped in the \code{bouquet_plot} S3 class which
+provides an informative \code{print()} header and a \code{format()} method. All
+operations that work on ggplot/patchwork (e.g. \code{ggsave()}, \code{+}) continue
+to work.
 }
 \description{
 Draws each time series as a turtle-graphics path from a shared origin,
@@ -141,12 +164,6 @@ an increase turns the heading \strong{left} by \eqn{\theta} and a decrease turns
 it \strong{right} by \eqn{\theta}. No change continues straight ahead. Because
 all series share the same origin and angle, the visual similarity of paths
 directly reflects the similarity of fluctuation patterns across series.
-
-The rotation angle \eqn{\theta} is derived automatically from the data.
-The binding constraint is the series whose cumulative heading sweeps the
-widest arc (measured as \code{max(cumsum) - min(cumsum)} of the signed steps).
-\eqn{\theta} is set to \code{ceiling_pct} of the largest angle that would not
-cause that series to complete a full 360° loop.
 }
 \details{
 \subsection{Input format}{
@@ -159,27 +176,14 @@ should share the same time index values and have equal length.
 
 For each series, the signed first difference is binarised to \eqn{+1}
 (increase), \eqn{-1} (decrease), or \eqn{0} (no change). The heading at
-step \eqn{i} is accumulated as:
-
-\deqn{h_i = h_{\text{launch}} + \sum_{k=2}^{i} d_k \cdot \theta}
-
-which is computed in one vectorised pass via \code{\link[base:cumsum]{base::cumsum()}}. The
-Cartesian coordinates follow as:
-\eqn{x_i = \sum_{k=2}^{i} \cos(h_k)}, and similarly for \eqn{y}.
+step \eqn{i} accumulates via \code{\link[base:cumsum]{base::cumsum()}}; coordinates follow as
+\eqn{x_i = \sum \cos(h_k)}, \eqn{y_i = \sum \sin(h_k)}.
 }
 
 \subsection{Angle derivation}{
 
-A complete loop occurs when the heading sweeps \eqn{\geq 360°}. The sweep
-equals \eqn{(\max C - \min C) \cdot \theta}, where \eqn{C} is the cumulative
-sum of the signed steps. The angle is therefore:
-
-\deqn{\theta = \frac{360°}{\max_s(\max C_s - \min C_s)} \times
+\deqn{\theta = \frac{360\degree}{\max_s(\max C_s - \min C_s)} \times
   \texttt{ceiling\_pct}}
-
-Note that \code{max(abs(C))} is \strong{not} the correct constraint: a series that
-dips to \eqn{-5} then climbs to \eqn{+20} sweeps 25 steps' worth of angle
-even though neither extreme alone reaches 25.
 }
 }
 \examples{
@@ -204,22 +208,24 @@ gw_long <- tibble::tibble(
 make_plot_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
 
-# Column-driven colours and faceting
-make_plot_bouquet(
-  data          = gw_long,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = region,
-  flower_colors = region,
-  facet_by      = region,
-  title         = "Groundwater Level Fluctuations \u2014 2023"
-)
+# Highlight one station; others are dimmed
+make_plot_bouquet(gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  highlight  = "Station A")
+
+# Normalised mode: each series uses the full angular range
+make_plot_bouquet(gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  normalise  = TRUE)
 }
 
 }
 \seealso{
-The technique is structurally related to \strong{DNA walk} visualisations
-(Gates 1986; Yau et al. 2003), which encode nucleotide sequences as 2-D
-paths using similar binary-direction rules.
+\code{\link[=cluster_bouquet]{cluster_bouquet()}} to group series by directional similarity
+before plotting. \code{\link[=save_bouquet]{save_bouquet()}} for convenient export.
+\code{\link[=make_plot_bouquet_interactive]{make_plot_bouquet_interactive()}} for a plotly hover tooltip version.
 }

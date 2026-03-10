@@ -101,12 +101,32 @@ data_gems |>
     title = "Groundwater levels in Germany",
     flower_color = "blossom",
     stem_colors = "greens"
-  ) +
-  theme(
-    plot.subtitle = element_text(size = 25)
   )
 
 data_gems |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    flower_color = "blossom",
+    stem_colors = "greens",
+    normalise = TRUE,
+    highlight = "MW_1018"
+  )
+
+data_gems |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    flower_color = "blossom",
+    stem_colors = "greens",
+    highlight = c("MW_1018", "MW_1107")
+  )
+
+  data_gems |> 
   make_plot_bouquet(
     time_col = date,
     series_col = id,
@@ -154,6 +174,51 @@ data_gems |>
     lat_col = northing_epsg_3035,
     stem_colors = "greens",
     coord_crs = 3035
+  )
+
+
+
+data_gems |> 
+  cluster_bouquet(
+    distance = "correlation", 
+    method = "hclust",
+    k = 5
+  ) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.95,
+    flower_color = cluster,
+    facet_by = cluster,
+    lon_col = easting_epsg_3035,
+    lat_col = northing_epsg_3035,
+    stem_colors = cluster,
+    coord_crs = 3035,
+    cluster_hull = cluster,
+    hull_coverage = .5
+  )
+
+data_gems |> 
+  cluster_bouquet(
+    distance = "correlation", 
+    method = "hclust",
+    k = 12
+  ) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.95,
+    flower_color = cluster,
+    facet_by = cluster,
+    lon_col = easting_epsg_3035,
+    lat_col = northing_epsg_3035,
+    stem_colors = cluster,
+    coord_crs = 3035,
+    cluster_hull = cluster
   )
 
 

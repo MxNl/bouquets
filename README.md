@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file. -->
 
-# bouquets <img src="man/figures/logo.png" align="right" height="139" alt="" />
+# bouquets <img src="man/figures/logo.svg" align="right" height="139" alt="bouquets hex sticker" />
 
 <!-- badges: start -->
 
@@ -34,12 +34,15 @@ remotes::install_github("MxNl/bouquets")
 
 Optional dependencies that unlock extra features:
 
-| Package     | Feature                                    |
-|-------------|--------------------------------------------|
+| Package | Feature |
+|----|----|
 | `patchwork` | Location map panel (`lon_col` + `lat_col`) |
-| `maps`      | Map background (required for map panel)    |
-| `mapdata`   | Sub-national boundaries on the map         |
-| `sf`        | Reprojection of non-WGS84 coordinates      |
+| `maps` | Map background (required for map panel) |
+| `mapdata` | Sub-national boundaries on the map |
+| `sf` | Reprojection of non-WGS84 coordinates |
+| `ggforce` | Cluster hull overlays on map (`cluster_hull`) |
+| `ggblend` | Perceptual blending for hulls and points on map (`blend = TRUE`) |
+| `plotly` | Interactive hover-tooltip version |
 
 ------------------------------------------------------------------------
 
@@ -73,6 +76,7 @@ make_plot_bouquet(gw_long,
   value_col  = level_m,
   verbose    = FALSE
 )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
 
 <img src="man/figures/README-basic-1.png" alt="" width="100%" />
@@ -92,6 +96,7 @@ make_plot_bouquet(gw_long,
   flower_colors = "blossom",
   verbose       = FALSE
 )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
 
 <img src="man/figures/README-keywords-1.png" alt="" width="100%" />
@@ -112,6 +117,7 @@ make_plot_bouquet(gw_long,
   title         = "Groundwater dynamics by region",
   verbose       = FALSE
 )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
 
 <img src="man/figures/README-facet-1.png" alt="" width="100%" />
@@ -131,6 +137,7 @@ make_plot_bouquet(gw_long,
   title         = "Groundwater — dark mode",
   verbose       = FALSE
 )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
 
 <img src="man/figures/README-dark-1.png" alt="" width="100%" />
@@ -160,6 +167,7 @@ gw_long |>
     title         = "Series grouped by directional dynamics",
     verbose       = FALSE
   )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
 
 <img src="man/figures/README-cluster-1.png" alt="" width="100%" />
@@ -186,9 +194,51 @@ make_plot_bouquet(gw_coords,
   map_width  = 0.38,
   verbose    = FALSE
 )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C + map
 ```
 
 <img src="man/figures/README-map-1.png" alt="" width="100%" />
+
+### Cluster hulls on the map
+
+Pass the cluster column to `cluster_hull` to draw colour-matched concave
+hulls around each cluster’s locations. Hull fill colour automatically
+matches the cluster’s `flower_colors`. Use `hull_coverage` (default `1`)
+to focus the hull on the core of each cluster and reduce overlap when
+clusters are dense:
+
+``` r
+set.seed(7)
+gw_coords <- dplyr::mutate(gw_long,
+  lon = rep(c(6.9, 13.4, 9.9, 12.1, 7.5, 11.2, 8.7, 14.8), each = n),
+  lat = rep(c(53.6, 52.5, 51.5, 48.1, 51.2, 49.8, 47.8, 50.9), each = n)
+)
+
+gw_coords |>
+  cluster_bouquet(
+    time_col   = week,
+    series_col = station,
+    value_col  = level_m,
+    verbose    = FALSE
+  ) |>
+  make_plot_bouquet(
+    time_col      = week,
+    series_col    = station,
+    value_col     = level_m,
+    stem_colors   = cluster,
+    flower_colors = cluster,
+    lon_col       = lon,
+    lat_col       = lat,
+    cluster_hull  = cluster,
+    hull_coverage = 0.8,        # focus hull on inner 80% of each cluster
+    map_width     = 0.40,
+    title         = "Cluster hulls (core 80%)",
+    verbose       = FALSE
+  )
+#> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C + map
+```
+
+<img src="man/figures/README-cluster-hull-1.png" alt="" width="100%" />
 
 ------------------------------------------------------------------------
 

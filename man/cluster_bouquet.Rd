@@ -16,11 +16,12 @@ cluster_bouquet(
   resolution = 0.5,
   pca_variance = 0.9,
   cluster_col = "cluster",
-  verbose = TRUE
+  seed = 42L,
+  verbose = FALSE
 )
 }
 \arguments{
-\item{data}{A long-format data frame or tibble — the same format expected
+\item{data}{A long-format data frame or tibble -- the same format expected
 by \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}.}
 
 \item{time_col}{<\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}> The time index
@@ -34,115 +35,80 @@ value column. Defaults to the third column.}
 
 \item{k}{Either a positive integer specifying the number of clusters, or
 \code{"auto"} (default) to select the optimal number by maximising the
-composite silhouette score across \verb{k = 2, …, k_max}.}
+composite silhouette score across \verb{k = 2, ..., k_max}.}
 
-\item{k_max}{A single positive integer. The upper bound considered when
-\code{k = "auto"}. Capped internally at \code{n_series - 1}. Defaults to \code{8L}.}
+\item{k_max}{A single positive integer. Upper bound considered when
+\code{k = "auto"}. Capped at \code{n_series - 1}. Defaults to \code{8L}.}
 
 \item{method}{The clustering algorithm. One of:
 \describe{
-\item{\code{"pca_hclust"}}{(Default) Projects direction sequences onto their
-principal components retaining \code{pca_variance} of variance, then
-applies agglomerative hierarchical clustering with Ward's D2 linkage
-in that space. The PCA step removes noise dimensions that dilute
-cluster separation in long series. Deterministic; no extra packages
-required. The \code{distance} argument does not apply — distance is always
-Euclidean in PCA space.}
-\item{\code{"pca_kmeans"}}{PCA projection followed by k-means. Faster for
-large numbers of series; non-deterministic (set a seed for
-reproducibility). The \code{distance} argument does not apply.}
-\item{\code{"hclust"}}{Hierarchical clustering with Ward's D2 directly on
-the direction sequences, using the \code{distance} metric. Best for short
-series (< ~50 steps) where the raw sequence distance is meaningful.}
-\item{\code{"kmeans"}}{k-means directly on the direction sequences. The
-\code{distance} argument does not apply (k-means always uses Euclidean
-internally). Suitable for short series with many observations.}
-\item{\code{"pam"}}{Partitioning Around Medoids using the \code{distance} metric.
-More robust to outlier series than k-means because cluster centres are
-always real observations. Requires the \pkg{cluster} package.}
+\item{\code{"pca_hclust"}}{(Default) PCA projection followed by agglomerative
+hierarchical clustering with Ward's D2. Deterministic; no extra
+packages required. The \code{distance} argument does not apply.}
+\item{\code{"pca_kmeans"}}{PCA projection followed by k-means. Set \code{seed}
+for reproducibility. The \code{distance} argument does not apply.}
+\item{\code{"hclust"}}{Ward's D2 hierarchical clustering directly on the
+direction sequences using the \code{distance} metric. Best for short series.}
+\item{\code{"kmeans"}}{k-means on the direction sequences. Always uses
+Euclidean distance internally. Set \code{seed} for reproducibility.}
+\item{\code{"pam"}}{Partitioning Around Medoids. More robust to outliers.
+Requires the \pkg{cluster} package.}
 }}
 
-\item{distance}{The distance metric applied to the raw direction sequences.
-One of:
-\describe{
-\item{\code{"euclidean"}}{(Default) Penalises step-by-step disagreements
-between sequences.}
-\item{\code{"correlation"}}{Converts Pearson correlation to a distance as
-\eqn{1 - r}, measuring whether series \emph{co-move} in their ups and
-downs regardless of their absolute patterns. Often the most
-meaningful metric for hydrological series.}
-\item{\code{"manhattan"}}{Sum of absolute step differences. Less sensitive
-to occasional large divergences than Euclidean.}
-}
-\strong{Note}: only applied by \code{"hclust"} and \code{"pam"}. The PCA methods
-always use Euclidean distance in the reduced space; k-means has no
-distance argument by design.}
+\item{distance}{Distance metric for \code{"hclust"} and \code{"pam"}. One of
+\code{"euclidean"} (default), \code{"correlation"} (\eqn{1 - r}), or \code{"manhattan"}.
+Not used by PCA methods or \code{"kmeans"}.}
 
-\item{resolution}{A non-negative number controlling the preference for
-more vs fewer clusters during automatic k selection. The composite score
-is:
+\item{resolution}{A non-negative number. Composite k-selection score:
+\eqn{\bar{s}(k) \times \min_c \bar{s}_c(k) \times k^{\text{resolution}}}.
+Higher values favour finer clusters. \code{0} = plain mean silhouette.
+Default \code{0.5}.}
 
-\deqn{\text{score}(k) = \bar{s}(k) \times \min_c \bar{s}_c(k) \times
-  k^{\text{resolution}}}
+\item{pca_variance}{Cumulative variance retained during PCA. Only used by
+\code{"pca_hclust"} and \code{"pca_kmeans"}. Default \code{0.90}.}
 
-where \eqn{\bar{s}(k)} is the overall mean silhouette width and
-\eqn{\min_c \bar{s}_c(k)} is the mean silhouette of the \emph{worst} cluster.
-Increasing \code{resolution} rewards finer groupings as long as all clusters
-remain well-defined. \code{resolution = 0} falls back to plain mean
-silhouette. Defaults to \code{0.5}.}
+\item{cluster_col}{String. Name of the cluster column added to \code{data}.
+Default \code{"cluster"}.}
 
-\item{pca_variance}{A number in \verb{(0, 1]}. The cumulative proportion of
-variance to retain during PCA compression. Only used by \code{"pca_hclust"}
-and \code{"pca_kmeans"}. Defaults to \code{0.90}.}
+\item{seed}{Integer or \code{NULL}. Random seed passed to \code{\link[base:Random]{base::set.seed()}}
+before k-means initialisation. Ensures reproducible results for
+\code{"pca_kmeans"} and \code{"kmeans"}. \code{NULL} = no seed (non-reproducible).
+Default \code{42L}.}
 
-\item{cluster_col}{A string. The name of the column added to \code{data}.
-Defaults to \code{"cluster"}.}
-
-\item{verbose}{Logical. Whether to print the k selection table, chosen k,
-mean silhouette, and cluster sizes. Defaults to \code{TRUE}.}
+\item{verbose}{Logical. Print k selection table, chosen k, silhouette score,
+and cluster sizes. Default \code{FALSE}.}
 }
 \value{
-The original \code{data} tibble with one additional factor column named
-by \code{cluster_col}. Levels are \code{"C1"}, \code{"C2"}, … ordered by decreasing
-cluster size.
+The original \code{data} tibble with one additional factor column (named
+by \code{cluster_col}, levels \code{"C1"}, \code{"C2"}, ... ordered by decreasing size)
+plus a \code{cluster_bouquet} S3 class. The object also carries a \code{bq_meta}
+attribute containing all clustering diagnostics; use
+\code{\link[=summary.cluster_bouquet]{summary.cluster_bouquet()}} to print them.
 }
 \description{
 Encodes each time series as a sequence of signed directional steps
 (\eqn{+1} increase, \eqn{-1} decrease, \eqn{0} no change) and clusters
 the series based on the similarity of those sequences. The resulting
 \code{cluster} column can be passed directly to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} via
-\code{stem_colors}, \code{flower_colors}, or \code{facet_by}.
+\code{stem_colors}, \code{flower_colors}, \code{facet_by}, or \code{cluster_hull}.
+
+The returned object is both the original \code{data} tibble (with an added
+cluster column) \strong{and} a \code{cluster_bouquet} S3 object. Call
+\code{\link[=summary.cluster_bouquet]{summary.cluster_bouquet()}} on it to print a structured report of cluster
+quality, sizes, and member series.
 }
 \details{
 \subsection{Feature representation}{
 
 Each series of length \eqn{n} is represented as a vector of \eqn{n - 1}
-signed steps \eqn{d_i \in \{-1, 0, +1\}}. These form the rows of a
-feature matrix \eqn{M \in \mathbb{R}^{n_\text{series} \times (n-1)}}.
+signed steps \eqn{d_i \in \{-1, 0, +1\}}.
 }
 
-\subsection{Which method and distance to choose}{
-
-For typical hydrological series (weekly to daily, many years):
-\itemize{
-\item Start with \code{"pca_hclust"} (default). PCA compression removes the
-noise that makes long raw sequences hard to separate.
-\item If you suspect the series differ mainly in \emph{co-movement} rather
-than exact pattern, try \verb{method = "hclust", distance = "correlation"}.
-This is often the most geologically meaningful choice.
-\item Use \code{"pam"} when you want cluster representatives to be real
-observed series that you can point to in the data.
-}
-}
-
-\subsection{Composite k-selection score}{
+\subsection{Composite k-selection}{
 
 Plain mean silhouette consistently selects k = 2 because two large blobs
-almost always score well globally even when finer structure exists. The
-composite score adds two corrections: the worst-cluster term
-\eqn{\min_c \bar{s}_c(k)} kills solutions where one cluster is
-ill-defined, and the resolution exponent \eqn{k^\text{resolution}} rewards
-cleaner solutions at higher k.
+score globally well even when finer structure exists. The composite score
+adds a worst-cluster penalty and a resolution exponent.
 }
 
 \subsection{Pairing with \code{make_plot_bouquet()}}{
@@ -150,12 +116,9 @@ cleaner solutions at higher k.
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{data |>
   cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
   make_plot_bouquet(
-    time_col      = date,
-    series_col    = id,
-    value_col     = gwl,
-    stem_colors   = cluster,
-    flower_colors = cluster,
-    facet_by      = cluster
+    time_col      = date,   series_col    = id,   value_col = gwl,
+    stem_colors   = cluster, flower_colors = cluster,
+    lon_col = lon, lat_col = lat, cluster_hull = cluster
   )
 }\if{html}{\out{</div>}}
 }
@@ -183,37 +146,17 @@ gw_long <- tibble::tibble(
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
 
-# Correlation distance with hclust — often best for hydrological series
-clustered_corr <- cluster_bouquet(gw_long,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  method     = "hclust",
-  distance   = "correlation"
-)
+# Inspect the result
+summary(clustered)
 
-# Increase resolution to push toward finer, cleaner clusters
-clustered_fine <- cluster_bouquet(gw_long,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  resolution = 1.5
-)
-
-# Visualise — colour and facet by cluster
+# Plot silhouette scores across k to inspect the elbow
 \donttest{
-make_plot_bouquet(clustered,
-  time_col      = week,
-  series_col    = station,
-  value_col     = level_m,
-  stem_colors   = cluster,
-  flower_colors = cluster,
-  facet_by      = cluster,
-  title         = "Groundwater Stations by Directional Cluster"
-)
+plot_cluster_quality(clustered)
 }
 
 }
 \seealso{
 \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} for visualising the result.
+\code{\link[=summary.cluster_bouquet]{summary.cluster_bouquet()}} for a structured quality report.
+\code{\link[=plot_cluster_quality]{plot_cluster_quality()}} to plot silhouette scores across k.
 }
