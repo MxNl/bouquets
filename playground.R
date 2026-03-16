@@ -200,6 +200,66 @@ data_gems |>
     hull_coverage = .5
   )
 
+
+data_gems |> 
+  cluster_bouquet(
+    distance = "correlation", 
+    method = "hclust",
+    k = 5
+  ) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.95,
+    flower_color = cluster,
+    facet_by = cluster,
+    lon_col = easting_epsg_3035,
+    lat_col = northing_epsg_3035,
+    stem_colors = cluster,
+    coord_crs = 3035,
+    cluster_hull = cluster,
+    hull_coverage = .5,
+    normalise = "magnitude"
+  )
+
+sample_groups <- function(df, col, n) {
+  groups <- df %>% distinct({{ col }}) %>% slice_sample(n = n)
+  semi_join(df, groups, by = rlang::as_name(rlang::ensym(col)))
+}
+
+
+# remove "magnitude" option for normalisation and remove all related documentation and code parts
+# add argument to annotate the time series name next to the flower
+# clustering method needs some tuning as the clusters visually from the plot are not really logical or consistent
+# seed argument in cluster_bouquet default to NULL
+# improve marker_every by giving key words like year, month, week, quarter, day like in lubridate to show markers at new year/new month etc.
+# replace hues package for colours by another modern colour palette that also adresses colourblind friendliness
+
+
+set.seed(42)
+data_gems |> 
+  sample_groups(id, 5) |> 
+  bouquets::cluster_bouquet(
+  # seed = NULL,
+  normalise = FALSE,
+  method = "pca_hclust"
+) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.7,
+    flower_color = cluster,
+    stem_colors = cluster,
+    marker_every = "year",
+    show_labels = TRUE,
+    label_color = "grey"
+  )
+
+
 data_gems |> 
   cluster_bouquet(
     distance = "correlation", 

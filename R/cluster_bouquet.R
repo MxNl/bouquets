@@ -1,11 +1,12 @@
 #' Cluster Time Series by Directional Dynamics
 #'
 #' @description
-#' Encodes each time series as a sequence of signed directional steps
-#' (\eqn{+1} increase, \eqn{-1} decrease, \eqn{0} no change) and clusters
-#' the series based on the similarity of those sequences. The resulting
-#' `cluster` column can be passed directly to [make_plot_bouquet()] via
-#' `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
+#' Encodes each time series as a feature vector and clusters the series based
+#' on similarity of those sequences. The feature representation is controlled
+#' by `normalise` and should match the value used in [make_plot_bouquet()] so
+#' that cluster assignments align visually with the rendered paths. The
+#' resulting `cluster` column can be passed directly to [make_plot_bouquet()]
+#' via `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
 #'
 #' The returned object is both the original `data` tibble (with an added
 #' cluster column) **and** a `cluster_bouquet` S3 object. Call
@@ -50,10 +51,19 @@
 #'   `"pca_hclust"` and `"pca_kmeans"`. Default `0.90`.
 #' @param cluster_col String. Name of the cluster column added to `data`.
 #'   Default `"cluster"`.
+#' @param normalise Logical. Controls the feature representation used for
+#'   clustering. Should match the value passed to [make_plot_bouquet()] so
+#'   that cluster assignments align visually with the rendered paths.
+#'   \describe{
+#'     \item{`FALSE` (default)}{Binary \eqn{\pm 1}/0 direction sequences.
+#'       Clusters by directional pattern only.}
+#'     \item{`TRUE`}{Same binary \eqn{\pm 1}/0 features. Per-series angle
+#'       scaling in [make_plot_bouquet()] does not change the direction
+#'       sequence, so clustering is identical to `FALSE`.}
+#'   }
 #' @param seed Integer or `NULL`. Random seed passed to [base::set.seed()]
 #'   before k-means initialisation. Ensures reproducible results for
-#'   `"pca_kmeans"` and `"kmeans"`. `NULL` = no seed (non-reproducible).
-#'   Default `42L`.
+#'   `"pca_kmeans"` and `"kmeans"`. Default `NULL` = no seed (non-reproducible).
 #' @param verbose Logical. Print k selection table, chosen k, silhouette score,
 #'   and cluster sizes. Default `FALSE`.
 #'
@@ -74,13 +84,21 @@
 #' adds a worst-cluster penalty and a resolution exponent.
 #'
 #' ## Pairing with `make_plot_bouquet()`
+#' Pass the same `normalise` value to both functions. When a `cluster_bouquet`
+#' object is piped into [make_plot_bouquet()], the `normalise` setting is
+#' inherited automatically if `make_plot_bouquet()` is left at its default
+#' (`normalise = FALSE`). A warning is emitted if an explicit mismatch is
+#' detected.
 #' ```r
 #' data |>
-#'   cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
+#'   cluster_bouquet(
+#'     time_col = date, series_col = id, value_col = gwl,
+#'     normalise = TRUE
+#'   ) |>
 #'   make_plot_bouquet(
-#'     time_col      = date,   series_col    = id,   value_col = gwl,
-#'     stem_colors   = cluster, flower_colors = cluster,
-#'     lon_col = lon, lat_col = lat, cluster_hull = cluster
+#'     time_col = date, series_col = id, value_col = gwl,
+#'     stem_colors = cluster, flower_colors = cluster
+#'     # normalise = TRUE is inherited automatically
 #'   )
 #' ```
 #'
@@ -107,7 +125,7 @@
 #'   )
 #' )
 #'
-#' # Default: PCA + hclust, auto k
+#' # Default: PCA + hclust, auto k, binary features
 #' clustered <- cluster_bouquet(gw_long,
 #'   time_col = week, series_col = station, value_col = level_m)
 #'
@@ -137,7 +155,8 @@ cluster_bouquet <- function(
     resolution   = 0.5,
     pca_variance = 0.90,
     cluster_col  = "cluster",
-    seed         = 42L,
+    normalise    = FALSE,
+    seed         = NULL,
     verbose      = FALSE) {
 
   method   <- match.arg(method)
@@ -146,6 +165,9 @@ cluster_bouquet <- function(
   # -- Validate inputs ----------------------------------------------------------
   if (!is.data.frame(data))
     stop("`data` must be a data frame or tibble.", call. = FALSE)
+
+  if (!is.logical(normalise) || length(normalise) != 1L)
+    stop("`normalise` must be TRUE or FALSE.", call. = FALSE)
 
   if (!identical(k, "auto")) {
     if (!is.numeric(k) || length(k) != 1L || k < 2L || k != round(k))
@@ -196,7 +218,9 @@ cluster_bouquet <- function(
   if (!is.numeric(data[[value_col_name]]))
     stop(sprintf("Column '%s' must be numeric.", value_col_name), call. = FALSE)
 
-  # -- Build direction-sequence feature matrix ----------------------------------
+  # -- Build feature matrix -----------------------------------------------------
+  # normalise = FALSE / TRUE  ->  binary +1/-1/0 direction sequences
+  # normalise = "magnitude"   ->  raw signed deltas, globally range-normalised
   dir_long <- data |>
     dplyr::rename(
       bq_t = dplyr::all_of(time_col_name),
@@ -226,6 +250,10 @@ cluster_bouquet <- function(
   if (n_series < 3L)
     stop("At least 3 series are required for meaningful clustering.", call. = FALSE)
 
+  feat_mat <- matrix(0, nrow = n_series, ncol = n_features,
+                     dimnames = list(series_names, NULL))
+
+  # Binary +1/-1/0 direction sequences
   feat_mat <- matrix(0L, nrow = n_series, ncol = n_features,
                      dimnames = list(series_names, NULL))
   for (sn in series_names) {
@@ -332,6 +360,7 @@ cluster_bouquet <- function(
     sil_tbl      = sil_tbl,
     score_tbl    = score_tbl,
     cluster_col  = cluster_col,
+    normalise    = normalise,
     seed         = seed,
     n_series     = n_series
   )
@@ -375,6 +404,7 @@ summary.cluster_bouquet <- function(object, ...) {
   cat("-- cluster_bouquet summary ----------------------------------------------\n")
   cat(sprintf("  Method    : %s\n", m$method))
   cat(sprintf("  Distance  : %s\n", m$distance))
+  cat(sprintf("  Normalise : %s\n", if (isTRUE(m$normalise)) "TRUE" else "FALSE"))
   cat(sprintf("  Seed      : %s\n", if (is.null(m$seed)) "none" else m$seed))
   cat(sprintf("  Series    : %d   k = %d   Resolution = %.2f\n",
               m$n_series, m$k, m$resolution))

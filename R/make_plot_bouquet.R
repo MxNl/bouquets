@@ -101,6 +101,9 @@
                   else sort(unique(as.character(raw_series)))
   n_series <- length(series_names)
 
+  launch_rad <- launch_deg * pi / 180
+
+  # ---- Modes: FALSE (global binary) and TRUE (per-series binary) ---------------
   sweep_tbl <- df_long |>
     dplyr::filter(.data$direction != "start") |>
     dplyr::group_by(.data$bq_s) |>
@@ -113,7 +116,12 @@
       cum_net = cumsum(.data$signed_step)
     ) |>
     dplyr::summarise(
-      cum_net_range = max(.data$cum_net) - min(.data$cum_net),
+      # Include the implicit 0 starting point so that s_sweep correctly
+      # counts n steps (not n-1) for a monotonic series. Without this,
+      # a series of exactly n same-direction steps yields s_sweep = n-1,
+      # theta = ceiling_pct*360/(n-1), and total heading = ceiling_pct*360*n/(n-1),
+      # which equals 360 deg when n = 1/(1-ceiling_pct), causing a closed loop.
+      cum_net_range = max(c(0L, .data$cum_net)) - min(c(0L, .data$cum_net)),
       .groups = "drop"
     )
 
@@ -122,7 +130,6 @@
   theta_ceiling  <- 360 / max_sweep
   theta_deg      <- theta_ceiling * ceiling_pct
   theta_rad      <- theta_deg * pi / 180
-  launch_rad     <- launch_deg * pi / 180
 
   if (verbose) {
     cat("=== Heading sweep per series ===\n")
@@ -132,19 +139,27 @@
     cat(sprintf("Ceiling angle  : %.2f deg\n", theta_ceiling))
     cat(sprintf("theta (%.0f%%)  : %.2f deg%s\n\n",
                 ceiling_pct * 100, theta_deg,
-                if (normalise) " [overridden per series in normalise mode]" else ""))
+                if (isTRUE(normalise)) " [overridden per series in normalise mode]" else ""))
   }
 
   # build_one has access to normalise, theta_rad, ceiling_pct via closure
   build_one <- function(df) {
-    if (normalise) {
-      steps_seq  <- df$direction[df$direction != "start"]
-      s_signed   <- ifelse(steps_seq == "increase", 1L,
-                           ifelse(steps_seq == "decrease", -1L, 0L))
-      s_cum      <- cumsum(s_signed)
-      s_sweep    <- max(s_cum) - min(s_cum)
-      if (s_sweep < 1L) s_sweep <- 1L
-      use_rad    <- (360 / s_sweep) * ceiling_pct * pi / 180
+    if (isTRUE(normalise)) {
+      steps_seq <- df$direction[df$direction != "start"]
+      # Use the total count of direction-changing steps (n_dir) as the
+      # denominator rather than the net heading sweep (s_sweep).
+      #
+      # Why n_dir prevents loops:
+      #   use_rad = ceiling_pct * 360 / n_dir
+      # A regular n-gon loop requires use_rad = 360/n for n <= n_dir vertices.
+      # But ceiling_pct * 360/n_dir < 360/n_dir <= 360/n for all n <= n_dir,
+      # so the resonance condition use_rad == 360/n is unreachable when
+      # ceiling_pct < 1. s_sweep (net range) does NOT have this property
+      # because s_sweep <= n_dir, allowing use_rad > 360/n_dir and creating
+      # reachable resonances (e.g. s_sweep=4, use_rad=72, pentagon pattern).
+      n_dir <- sum(steps_seq %in% c("increase", "decrease"))
+      if (n_dir < 1L) n_dir <- 1L
+      use_rad <- (2 * pi * ceiling_pct) / n_dir
     } else {
       use_rad <- theta_rad
     }
@@ -396,8 +411,20 @@
 #'   maximum angle to use as \eqn{\theta}. Default `0.80`.
 #' @param launch_deg Initial heading in degrees (counter-clockwise from
 #'   positive x-axis). `90` = straight up. Defaults to `90`.
-#' @param marker_every Positive integer. A dot is plotted at every
-#'   `marker_every`-th step. `NULL` (default) = no markers.
+#' @param marker_every Controls step-markers. Either a positive integer (a dot
+#'   every n-th step) or one of the time-frequency keywords `"year"`,
+#'   `"quarter"`, `"month"`, `"week"`, or `"day"`. For keywords, the
+#'   equivalent integer step count is estimated from the median interval of
+#'   `time_col`. Keywords require `time_col` to be a `Date` or `POSIXct`
+#'   vector; non-date columns fall back to `marker_every = 1` with a warning.
+#'   `NULL` (default) = no markers.
+#' @param show_labels Logical. When `TRUE`, the series name is printed next to
+#'   each flower symbol, offset in the direction of the final heading. Useful
+#'   when the legend is suppressed (e.g. when `n_series >= hide_legend_after`)
+#'   or for single-panel identification. Default `FALSE`.
+#' @param label_color Single colour string (e.g. `"#333333"`) applied to all
+#'   series labels when `show_labels = TRUE`. `NULL` (default) colours each
+#'   label to match its flower.
 #' @param show_rings Logical. Draw faint concentric reference rings. Default
 #'   `FALSE`.
 #' @param dark_mode Logical. `TRUE` = dark navy background. Default `FALSE`.
@@ -442,12 +469,18 @@
 #'   before this value are dropped before computing paths. `NULL` = no filter.
 #' @param to Optional scalar of the same class as `time_col`. Observations
 #'   after this value are dropped. `NULL` = no filter.
-#' @param normalise Logical. When `TRUE`, each series is assigned its own
-#'   per-series \eqn{\theta} so that every series uses the full angular range
-#'   independently of how volatile it is. This makes shape comparison easier
-#'   when series have very different volatility. When `FALSE` (default) all
-#'   series share a single global \eqn{\theta} derived from the most volatile
-#'   series.
+#' @param normalise Logical. Controls how the turning angle \eqn{\theta} is
+#'   derived.
+#'   \describe{
+#'     \item{`FALSE` (default)}{All series share a single global \eqn{\theta}
+#'       derived from the most volatile series (the one with the greatest
+#'       cumulative binary sweep). Turn direction is binarised to \eqn{\pm 1}
+#'       / 0, so only the direction of change is encoded, not its magnitude.
+#'       Best for comparing directional dynamics on a common scale.}
+#'     \item{`TRUE`}{Each series gets its own per-series \eqn{\theta} so every
+#'       path uses the full angular range independently of volatility. Useful
+#'       for shape comparison when series have very different variances.}
+#'   }
 #' @param verbose Logical. Print angle diagnostics to the console. Default
 #'   `FALSE`.
 #'
@@ -540,6 +573,8 @@ make_plot_bouquet <- function(
     ceiling_pct       = 0.80,
     launch_deg        = 90,
     marker_every      = NULL,
+    show_labels       = FALSE,
+    label_color       = NULL,
     show_rings        = FALSE,
     dark_mode         = FALSE,
     title             = NULL,
@@ -574,11 +609,24 @@ make_plot_bouquet <- function(
     stop("`ceiling_pct` must be a single number in (0, 1].", call. = FALSE)
   if (!is.numeric(launch_deg) || length(launch_deg) != 1L)
     stop("`launch_deg` must be a single number.", call. = FALSE)
+  marker_every_keywords <- c("year", "quarter", "month", "week", "day")
   if (!is.null(marker_every)) {
-    if (!is.numeric(marker_every) || length(marker_every) != 1L || marker_every < 1L)
-      stop("`marker_every` must be a single positive integer or NULL.", call. = FALSE)
-    marker_every <- as.integer(marker_every)
+    if (is.character(marker_every)) {
+      if (length(marker_every) != 1L || !marker_every %in% marker_every_keywords)
+        stop(sprintf('`marker_every` string must be one of: %s.',
+                     paste(marker_every_keywords, collapse = ", ")), call. = FALSE)
+    } else {
+      if (!is.numeric(marker_every) || length(marker_every) != 1L || marker_every < 1L)
+        stop("`marker_every` must be a positive integer or a frequency keyword.",
+             call. = FALSE)
+      marker_every <- as.integer(marker_every)
+    }
   }
+  if (!is.logical(show_labels) || length(show_labels) != 1L)
+    stop("`show_labels` must be TRUE or FALSE.", call. = FALSE)
+  if (!is.null(label_color) &&
+      (!is.character(label_color) || length(label_color) != 1L))
+    stop("`label_color` must be a single colour string or NULL.", call. = FALSE)
   if (!is.logical(show_rings) || length(show_rings) != 1L)
     stop("`show_rings` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(dark_mode) || length(dark_mode) != 1L)
@@ -587,6 +635,25 @@ make_plot_bouquet <- function(
     stop("`verbose` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(normalise) || length(normalise) != 1L)
     stop("`normalise` must be TRUE or FALSE.", call. = FALSE)
+
+  # -- Inherit / check normalise consistency with cluster_bouquet input ---------
+  if (inherits(data, "cluster_bouquet")) {
+    stored_normalise <- attr(data, "bq_meta")$normalise
+    if (!is.null(stored_normalise) && is.logical(stored_normalise)) {
+      if (identical(normalise, FALSE) && !identical(stored_normalise, FALSE)) {
+        normalise <- stored_normalise
+        message(paste0('bouquets: inheriting normalise = TRUE from cluster_bouquet ',
+                       'object. Pass normalise explicitly to suppress this message.'))
+      } else if (!identical(normalise, stored_normalise)) {
+        warning(sprintf(
+          paste0('normalise = %s but the cluster_bouquet was built with ',
+                 'normalise = %s. Cluster assignments may not align visually ',
+                 'with the rendered paths.'),
+          normalise, stored_normalise
+        ), call. = FALSE)
+      }
+    }
+  }
   if (!is.numeric(hide_legend_after) || length(hide_legend_after) != 1L ||
       hide_legend_after < 1L)
     stop("`hide_legend_after` must be a single positive integer.", call. = FALSE)
@@ -713,9 +780,32 @@ make_plot_bouquet <- function(
   n_steps   <- max(path_data$step)
   time_vals <- data[[time_col_name]]
 
+  # -- Resolve keyword marker_every to integer step count -----------------------
+  marker_every_label <- if (is.null(marker_every)) NULL else as.character(marker_every)
+  if (is.character(marker_every)) {
+    keyword_days <- c(year = 365.25, quarter = 91.3, month = 30.44,
+                      week = 7, day = 1)
+    if (inherits(time_vals, c("Date", "POSIXct", "POSIXlt"))) {
+      med_days <- stats::median(
+        as.numeric(diff(sort(unique(time_vals)))), na.rm = TRUE
+      )
+      if (med_days <= 0) med_days <- 1
+      marker_every <- max(1L, as.integer(round(keyword_days[marker_every] / med_days)))
+    } else {
+      warning(sprintf(
+        '`marker_every = "%s"` requires a Date/POSIXct time column; falling back to marker_every = 1.',
+        marker_every
+      ), call. = FALSE)
+      marker_every <- 1L
+    }
+  }
+
   if (is.null(subtitle)) {
-    norm_note <- if (normalise) " [normalised]" else
+    norm_note <- if (identical(normalise, TRUE)) {
+      " [normalised per series]"
+    } else {
       paste0(" (binding: ", binding_series, ", sweep = ", max_sweep, " steps)")
+    }
     subtitle <- paste0(
       n_series, " series | ",
       n_steps, " ", .format_interval(time_vals), " observations | ",
@@ -779,6 +869,24 @@ make_plot_bouquet <- function(
     inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
   )
 
+  if (show_labels) {
+    label_offset <- max(sqrt(path_data$x^2 + path_data$y^2), na.rm = TRUE) * 0.06
+    label_data <- end_data |>
+      dplyr::mutate(
+        lx          = .data$x + label_offset * cos(.data$heading_deg * pi / 180),
+        ly          = .data$y + label_offset * sin(.data$heading_deg * pi / 180),
+        label_col   = if (is.null(label_color)) .data$flower_col else label_color
+      )
+    p <- p + ggplot2::geom_text(
+      data        = label_data,
+      mapping     = ggplot2::aes(x = .data$lx, y = .data$ly,
+                                 label = .data$series,
+                                 color = I(.data$label_col)),
+      inherit.aes = FALSE, size = 3.0, family = "sans",
+      show.legend = FALSE, fontface = "bold"
+    )
+  }
+
   p <- p +
     ggplot2::scale_color_manual(values = stem_colors_resolved) +
     ggplot2::coord_equal(clip = "off")
@@ -792,7 +900,7 @@ make_plot_bouquet <- function(
   # -- Caption -------------------------------------------------------------------
   caption <- "flower = last step | o = origin"
   if (!is.null(marker_every))
-    caption <- paste0(caption, " | dot = every ", marker_every, " steps")
+    caption <- paste0(caption, " | dot = every ", marker_every_label)
   if (!is.null(highlight))
     caption <- paste0(caption, " | highlighted: ",
                       paste(highlight, collapse = ", "))

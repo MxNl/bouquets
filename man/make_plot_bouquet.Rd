@@ -138,12 +138,26 @@ before this value are dropped before computing paths. \code{NULL} = no filter.}
 \item{to}{Optional scalar of the same class as \code{time_col}. Observations
 after this value are dropped. \code{NULL} = no filter.}
 
-\item{normalise}{Logical. When \code{TRUE}, each series is assigned its own
-per-series \eqn{\theta} so that every series uses the full angular range
-independently of how volatile it is. This makes shape comparison easier
-when series have very different volatility. When \code{FALSE} (default) all
-series share a single global \eqn{\theta} derived from the most volatile
-series.}
+\item{normalise}{Controls how the turning angle \eqn{\theta} is derived.
+Three options are accepted:
+\describe{
+\item{\code{FALSE} (default)}{All series share a single global \eqn{\theta}
+derived from the most volatile series (the one with the greatest
+cumulative binary sweep). Turn direction is binarised to
+\eqn{\pm 1} / 0, so only the direction of change is encoded, not its
+magnitude. Best for comparing directional dynamics on a common scale.}
+\item{\code{TRUE}}{Each series is assigned its own per-series \eqn{\theta}
+so that every path uses the full angular range independently of
+volatility. Useful for shape comparison when series have very
+different variances; magnitude differences are suppressed.}
+\item{\code{"magnitude"}}{Turn angle at each step is proportional to the
+raw signed delta value rather than its sign alone. Calibrated globally
+so the series with the widest value range sweeps \code{ceiling_pct
+      \eqn{\times} 360\eqn{^\circ}}. This preserves amplitude information
+and enables magnitude comparison across series: a large jump bends the
+path more than a small one, and paths for volatile series curve more
+than flat ones.}
+}}
 
 \item{verbose}{Logical. Print angle diagnostics to the console. Default
 \code{FALSE}.}
