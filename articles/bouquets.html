@@ -200,61 +200,170 @@ variances.</p>
 <div class="section level2">
 <h2 id="clustering">Clustering<a class="anchor" aria-label="anchor" href="#clustering"></a>
 </h2>
-<p><code><a href="../reference/cluster_bouquet.html">cluster_bouquet()</a></code> adds a <code>cluster</code> column to
-the data. It returns a <code>cluster_bouquet</code> object: a normal
-tibble that also carries clustering diagnostics. Call
-<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> to inspect them.</p>
+<p><code><a href="../reference/cluster_bouquet.html">cluster_bouquet()</a></code> builds the actual bouquet paths and
+clusters series based on path geometry. Three approaches are
+available:</p>
+<ul>
+<li>
+<strong><code>"coords_*"</code></strong> — clusters on the flattened
+(x, y) path coordinates. Paths that look similar in the plot cluster
+together. This is the default.</li>
+<li>
+<strong><code>"heading_*"</code></strong> — clusters on the
+cumulative heading sequence. Captures turning-pattern similarity
+independently of absolute position.</li>
+<li>
+<strong><code>"area_*"</code></strong> — uses the shoelace area
+between pairs of paths as the distance. Captures both shape difference
+and spatial separation in a single scalar.</li>
+</ul>
+<p>Each family offers <code>_hclust</code> (Ward’s D2, deterministic),
+<code>_kmeans</code>, and <code>_pam</code> (Partitioning Around
+Medoids) variants.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clustered</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
 <span>  <span class="va">gw_long</span>,</span>
 <span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span>
 <span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
-<span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
-<span>  seed       <span class="op">=</span> <span class="fl">42L</span></span>
+<span>  value_col  <span class="op">=</span> <span class="va">level_m</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">clustered</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## -- cluster_bouquet summary ----------------------------------------------</span></span>
-<span><span class="co">##   Method    : pca_hclust</span></span>
-<span><span class="co">##   Distance  : euclidean (unused)</span></span>
+<span><span class="co">##   Method    : coords_hclust</span></span>
 <span><span class="co">##   Normalise : FALSE</span></span>
-<span><span class="co">##   Seed      : 42</span></span>
-<span><span class="co">##   Series    : 8   k = 3   Resolution = 0.50</span></span>
-<span><span class="co">##   Mean silhouette : 0.031  (weak structure -- consider more data or fewer clusters)</span></span>
+<span><span class="co">##   Seed      : none</span></span>
+<span><span class="co">##   Series    : 8   k = 4   Resolution = 0.50</span></span>
+<span><span class="co">##   Mean silhouette : 0.410  (reasonable structure)</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">##   Auto k selection (composite silhouette score):</span></span>
-<span><span class="co">##     k = 2 : 0.0020</span></span>
-<span><span class="co">##     k = 3 : 0.0311  &lt;-- selected</span></span>
-<span><span class="co">##     k = 4 : 0.0154</span></span>
-<span><span class="co">##     k = 5 : -0.0040</span></span>
-<span><span class="co">##     k = 6 : -0.0013</span></span>
-<span><span class="co">##     k = 7 : -0.0074</span></span>
+<span><span class="co">##     k = 2 : 0.2440</span></span>
+<span><span class="co">##     k = 3 : 0.3125</span></span>
+<span><span class="co">##     k = 4 : 0.4102  &lt;-- selected</span></span>
+<span><span class="co">##     k = 5 : 0.3273</span></span>
+<span><span class="co">##     k = 6 : 0.2600</span></span>
+<span><span class="co">##     k = 7 : 0.1051</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">##   Cluster sizes and members:</span></span>
-<span><span class="co">##     C1  (5 series, mean sil = 0.033)</span></span>
-<span><span class="co">##        S1, S2, S5, S6, S7</span></span>
-<span><span class="co">##     C2  (2 series, mean sil = 0.041)</span></span>
-<span><span class="co">##        S3, S4</span></span>
-<span><span class="co">##     C3  (1 series, mean sil = 0.000)</span></span>
-<span><span class="co">##        S8</span></span>
+<span><span class="co">##     C1  (3 series, mean sil = 0.501)</span></span>
+<span><span class="co">##        S2, S4, S6</span></span>
+<span><span class="co">##     C2  (2 series, mean sil = 0.699)</span></span>
+<span><span class="co">##        S1, S3</span></span>
+<span><span class="co">##     C3  (2 series, mean sil = 0.190)</span></span>
+<span><span class="co">##        S7, S8</span></span>
+<span><span class="co">##     C4  (1 series, mean sil = 0.000)</span></span>
+<span><span class="co">##        S5</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">##   Per-series silhouette widths:</span></span>
-<span><span class="co">##     S5                    C1   0.062  |</span></span>
-<span><span class="co">##     S6                    C1   0.035  |</span></span>
-<span><span class="co">##     S2                    C1   0.031  |</span></span>
-<span><span class="co">##     S7                    C1   0.029  |</span></span>
-<span><span class="co">##     S1                    C1   0.011  </span></span>
-<span><span class="co">##     S4                    C2   0.075  |</span></span>
-<span><span class="co">##     S3                    C2   0.006  </span></span>
-<span><span class="co">##     S8                    C3   0.000  </span></span>
+<span><span class="co">##     S4                    C1   0.568  |||||||||||</span></span>
+<span><span class="co">##     S6                    C1   0.491  ||||||||||</span></span>
+<span><span class="co">##     S2                    C1   0.445  |||||||||</span></span>
+<span><span class="co">##     S1                    C2   0.723  ||||||||||||||</span></span>
+<span><span class="co">##     S3                    C2   0.674  |||||||||||||</span></span>
+<span><span class="co">##     S8                    C3   0.246  |||||</span></span>
+<span><span class="co">##     S7                    C3   0.134  |||</span></span>
+<span><span class="co">##     S5                    C4   0.000  </span></span>
 <span><span class="co">## ------------------------------------------------------------------------</span></span></code></pre>
+<div class="section level3">
+<h3 id="heading-based-clustering">Heading-based clustering<a class="anchor" aria-label="anchor" href="#heading-based-clustering"></a>
+</h3>
+<p>Use <code>"heading_hclust"</code> when you want to group by curvature
+pattern regardless of where a path ends up spatially:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
+<span>  <span class="va">gw_long</span>,</span>
+<span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span>
+<span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
+<span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>  method     <span class="op">=</span> <span class="st">"heading_hclust"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## -- cluster_bouquet summary ----------------------------------------------</span></span>
+<span><span class="co">##   Method    : heading_hclust</span></span>
+<span><span class="co">##   Normalise : FALSE</span></span>
+<span><span class="co">##   Seed      : none</span></span>
+<span><span class="co">##   Series    : 8   k = 2   Resolution = 0.50</span></span>
+<span><span class="co">##   Mean silhouette : 0.537  (strong structure)</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Auto k selection (composite silhouette score):</span></span>
+<span><span class="co">##     k = 2 : 0.3771  &lt;-- selected</span></span>
+<span><span class="co">##     k = 3 : 0.1416</span></span>
+<span><span class="co">##     k = 4 : 0.2996</span></span>
+<span><span class="co">##     k = 5 : 0.2419</span></span>
+<span><span class="co">##     k = 6 : 0.1254</span></span>
+<span><span class="co">##     k = 7 : 0.0194</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Cluster sizes and members:</span></span>
+<span><span class="co">##     C1  (6 series, mean sil = 0.497)</span></span>
+<span><span class="co">##        S2, S4, S5, S6, S7, S8</span></span>
+<span><span class="co">##     C2  (2 series, mean sil = 0.658)</span></span>
+<span><span class="co">##        S1, S3</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Per-series silhouette widths:</span></span>
+<span><span class="co">##     S6                    C1   0.631  |||||||||||||</span></span>
+<span><span class="co">##     S2                    C1   0.603  ||||||||||||</span></span>
+<span><span class="co">##     S5                    C1   0.592  ||||||||||||</span></span>
+<span><span class="co">##     S4                    C1   0.577  ||||||||||||</span></span>
+<span><span class="co">##     S7                    C1   0.425  ||||||||</span></span>
+<span><span class="co">##     S8                    C1   0.152  |||</span></span>
+<span><span class="co">##     S3                    C2   0.692  ||||||||||||||</span></span>
+<span><span class="co">##     S1                    C2   0.624  ||||||||||||</span></span>
+<span><span class="co">## ------------------------------------------------------------------------</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="area-based-clustering">Area-based clustering<a class="anchor" aria-label="anchor" href="#area-based-clustering"></a>
+</h3>
+<p><code>"area_hclust"</code> captures both shape and spatial proximity
+in a single geometric distance — two paths that enclose a small area
+between them are considered similar:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
+<span>  <span class="va">gw_long</span>,</span>
+<span>  time_col   <span class="op">=</span> <span class="va">week</span>,</span>
+<span>  series_col <span class="op">=</span> <span class="va">station</span>,</span>
+<span>  value_col  <span class="op">=</span> <span class="va">level_m</span>,</span>
+<span>  method     <span class="op">=</span> <span class="st">"area_hclust"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## -- cluster_bouquet summary ----------------------------------------------</span></span>
+<span><span class="co">##   Method    : area_hclust</span></span>
+<span><span class="co">##   Normalise : FALSE</span></span>
+<span><span class="co">##   Seed      : none</span></span>
+<span><span class="co">##   Series    : 8   k = 3   Resolution = 0.50</span></span>
+<span><span class="co">##   Mean silhouette : 0.684  (strong structure)</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Auto k selection (composite silhouette score):</span></span>
+<span><span class="co">##     k = 2 : 0.1894</span></span>
+<span><span class="co">##     k = 3 : 0.6200  &lt;-- selected</span></span>
+<span><span class="co">##     k = 4 : 0.5897</span></span>
+<span><span class="co">##     k = 5 : 0.4084</span></span>
+<span><span class="co">##     k = 6 : 0.2883</span></span>
+<span><span class="co">##     k = 7 : 0.1116</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Cluster sizes and members:</span></span>
+<span><span class="co">##     C1  (3 series, mean sil = 0.769)</span></span>
+<span><span class="co">##        S2, S4, S6</span></span>
+<span><span class="co">##     C2  (3 series, mean sil = 0.524)</span></span>
+<span><span class="co">##        S5, S7, S8</span></span>
+<span><span class="co">##     C3  (2 series, mean sil = 0.795)</span></span>
+<span><span class="co">##        S1, S3</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##   Per-series silhouette widths:</span></span>
+<span><span class="co">##     S4                    C1   0.860  |||||||||||||||||</span></span>
+<span><span class="co">##     S6                    C1   0.801  ||||||||||||||||</span></span>
+<span><span class="co">##     S2                    C1   0.646  |||||||||||||</span></span>
+<span><span class="co">##     S8                    C2   0.728  |||||||||||||||</span></span>
+<span><span class="co">##     S5                    C2   0.467  |||||||||</span></span>
+<span><span class="co">##     S7                    C2   0.376  ||||||||</span></span>
+<span><span class="co">##     S1                    C3   0.812  ||||||||||||||||</span></span>
+<span><span class="co">##     S3                    C3   0.777  ||||||||||||||||</span></span>
+<span><span class="co">## ------------------------------------------------------------------------</span></span></code></pre>
+</div>
 <div class="section level3">
 <h3 id="visualise-cluster-quality">Visualise cluster quality<a class="anchor" aria-label="anchor" href="#visualise-cluster-quality"></a>
 </h3>
 <p><code><a href="../reference/plot_cluster_quality.html">plot_cluster_quality()</a></code> plots the composite silhouette
 score across all candidate k values; the selected k is highlighted in
 pink.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/plot_cluster_quality.html">plot_cluster_quality</a></span><span class="op">(</span><span class="va">clustered</span><span class="op">)</span></span></code></pre></div>
 <p><img src="bouquets_files/figure-html/cluster-quality-1.png" class="r-plt" alt="" width="700"></p>
 </div>
@@ -264,7 +373,7 @@ pink.</p>
 <p>The <code>cluster</code> column works directly with
 <code>stem_colors</code>, <code>flower_colors</code>, and
 <code>facet_by</code>.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
 <span>  <span class="va">clustered</span>,</span>
 <span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
@@ -272,7 +381,7 @@ pink.</p>
 <span>  value_col     <span class="op">=</span> <span class="va">level_m</span>,</span>
 <span>  stem_colors   <span class="op">=</span> <span class="va">cluster</span>,</span>
 <span>  flower_colors <span class="op">=</span> <span class="va">cluster</span>,</span>
-<span>  title         <span class="op">=</span> <span class="st">"Stations coloured by directional cluster"</span></span>
+<span>  title         <span class="op">=</span> <span class="st">"Stations coloured by path-geometry cluster"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## &lt;bouquet_plot&gt;  8 series | theta = 11.1 deg | binding: S5</span></span></code></pre>
 <p><img src="bouquets_files/figure-html/cluster-plot-1.png" class="r-plt" alt="" width="700"></p>
@@ -286,7 +395,7 @@ location map is appended to the right of the bouquet panel. Pass the
 cluster column to <code>cluster_hull</code> to draw concave hulls around
 each cluster’s points. Hull fill colour automatically matches the
 cluster’s <code>flower_colors</code>.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
 <span>  <span class="va">clustered</span>,</span>
 <span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
@@ -310,7 +419,7 @@ points can obscure the map. <code>hull_coverage</code> (default
 points that lie closest to the cluster centroid. Setting it to
 <code>0.75</code>, for example, excludes the outermost 25% of points
 before computing the hull:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span></span>
 <span>  <span class="va">clustered</span>,</span>
 <span>  time_col      <span class="op">=</span> <span class="va">week</span>,</span>
@@ -333,7 +442,7 @@ before computing the hull:</p>
 </h2>
 <p><code><a href="../reference/save_bouquet.html">save_bouquet()</a></code> wraps <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code> with
 sensible defaults for the bouquet aspect ratio.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_plot_bouquet.html">make_plot_bouquet</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">week</span>, <span class="va">station</span>, <span class="va">level_m</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/save_bouquet.html">save_bouquet</a></span><span class="op">(</span><span class="va">p</span>, <span class="st">"my_bouquet.png"</span>, width <span class="op">=</span> <span class="fl">10</span>, height <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -342,14 +451,14 @@ sensible defaults for the bouquet aspect ratio.</p>
 </h2>
 <p><code><a href="../reference/make_plot_bouquet_interactive.html">make_plot_bouquet_interactive()</a></code> produces a plotly figure
 with hover tooltips. Requires the <code>plotly</code> package.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/make_plot_bouquet_interactive.html">make_plot_bouquet_interactive</a></span><span class="op">(</span><span class="va">gw_long</span>, <span class="va">week</span>, <span class="va">station</span>, <span class="va">level_m</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="full-pipeline">Full pipeline<a class="anchor" aria-label="anchor" href="#full-pipeline"></a>
 </h2>
 <p>A compact end-to-end workflow:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gw_long</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span></span>
 <span>    time_col   <span class="op">=</span> <span class="va">week</span>,</span>

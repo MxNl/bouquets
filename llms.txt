@@ -16,7 +16,7 @@ The technique is structurally related to DNA walk visualisations (Gates
 ``` r
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("MxNl/bouquets")
+remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
 ```
 
 Optional dependencies that unlock extra features:
@@ -132,18 +132,20 @@ make_plot_bouquet(gw_long,
 ### Clustering
 
 [`cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/cluster_bouquet.md)
-groups series by the similarity of their directional sequences and
-appends a `cluster` column that plugs directly into
+builds the actual bouquet paths and groups series by path-geometry
+similarity. Three families of methods are available: `"coords_*"`
+(default — clusters on the (x, y) path coordinates, so paths that look
+alike in the plot cluster together), `"heading_*"` (cumulative heading
+sequence, rotation-invariant), and `"area_*"` (shoelace area between
+path pairs). The resulting `cluster` column plugs directly into
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md):
 
 ``` r
-set.seed(7)
 gw_long |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
-    value_col  = level_m,
-    verbose    = FALSE
+    value_col  = level_m
   ) |>
   make_plot_bouquet(
     time_col      = week,
@@ -152,8 +154,7 @@ gw_long |>
     stem_colors   = cluster,
     flower_colors = cluster,
     facet_by      = cluster,
-    title         = "Series grouped by directional dynamics",
-    verbose       = FALSE
+    title         = "Series grouped by path-geometry similarity"
   )
 #> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C
 ```
@@ -196,7 +197,6 @@ to focus the hull on the core of each cluster and reduce overlap when
 clusters are dense:
 
 ``` r
-set.seed(7)
 gw_coords <- dplyr::mutate(gw_long,
   lon = rep(c(6.9, 13.4, 9.9, 12.1, 7.5, 11.2, 8.7, 14.8), each = n),
   lat = rep(c(53.6, 52.5, 51.5, 48.1, 51.2, 49.8, 47.8, 50.9), each = n)
@@ -206,8 +206,7 @@ gw_coords |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
-    value_col  = level_m,
-    verbose    = FALSE
+    value_col  = level_m
   ) |>
   make_plot_bouquet(
     time_col      = week,
@@ -218,10 +217,9 @@ gw_coords |>
     lon_col       = lon,
     lat_col       = lat,
     cluster_hull  = cluster,
-    hull_coverage = 0.8,        # focus hull on inner 80% of each cluster
+    hull_coverage = 0.8,
     map_width     = 0.40,
-    title         = "Cluster hulls (core 80%)",
-    verbose       = FALSE
+    title         = "Cluster hulls (core 80%)"
   )
 #> <bouquet_plot>  8 series | theta = 11.1 deg | binding: Station C + map
 ```
@@ -254,8 +252,8 @@ coordinates follow as a vectorised `cumsum(cos(heading))` /
 If you use bouquets in a publication, please cite it as:
 
 ``` R
-Nölscher, M. (2025). bouquets: Angular accumulation plots for time series.
-R package version 0.1.0. https://github.com/MxNl/bouquets
+Last, F. (2025). bouquets: Angular accumulation plots for time series.
+R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
 ```
 
 ------------------------------------------------------------------------

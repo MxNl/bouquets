@@ -1,8 +1,8 @@
 # Cluster Time Series by Directional Dynamics
 
 Encodes each time series as a feature vector and clusters the series
-based on similarity of those sequences. The feature representation is
-controlled by `normalise` and should match the value used in
+based on similarity. The feature representation is controlled by
+`method` and `normalise`, and should match the value used in
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 so that cluster assignments align visually with the rendered paths. The
 resulting `cluster` column can be passed directly to
@@ -25,12 +25,13 @@ cluster_bouquet(
   value_col = 3,
   k = "auto",
   k_max = 8L,
-  method = c("pca_hclust", "pca_kmeans", "hclust", "kmeans", "pam"),
-  distance = c("euclidean", "correlation", "manhattan"),
+  method = c("coords_hclust", "coords_kmeans", "coords_pam", "heading_hclust",
+    "heading_kmeans", "heading_pam", "area_hclust", "area_pam"),
   resolution = 0.5,
-  pca_variance = 0.9,
   cluster_col = "cluster",
   normalise = FALSE,
+  ceiling_pct = 0.8,
+  launch_deg = 90,
   seed = NULL,
   verbose = FALSE
 )
@@ -72,39 +73,48 @@ cluster_bouquet(
 
 - method:
 
-  The clustering algorithm. One of:
+  The clustering algorithm and feature representation. One of:
 
-  `"pca_hclust"`
+  `"coords_hclust"`
 
-  :   (Default) PCA projection followed by agglomerative hierarchical
-      clustering with Ward's D2. Deterministic; no extra packages
-      required. The `distance` argument does not apply.
+  :   (Default) Clusters on the actual (x, y) path coordinates. Paths
+      that look similar in the plot cluster together. Uses Ward's D2
+      hierarchical clustering. Deterministic.
 
-  `"pca_kmeans"`
+  `"coords_kmeans"`
 
-  :   PCA projection followed by k-means. Set `seed` for
-      reproducibility. The `distance` argument does not apply.
+  :   As `"coords_hclust"` but k-means. Set `seed` for reproducibility.
 
-  `"hclust"`
+  `"coords_pam"`
 
-  :   Ward's D2 hierarchical clustering directly on the direction
-      sequences using the `distance` metric. Best for short series.
+  :   As `"coords_hclust"` but Partitioning Around Medoids. More robust
+      to outliers. Requires cluster.
 
-  `"kmeans"`
+  `"heading_hclust"`
 
-  :   k-means on the direction sequences. Always uses Euclidean distance
-      internally. Set `seed` for reproducibility.
+  :   Clusters on the cumulative heading angle sequence. Captures
+      turning patterns independently of absolute position;
+      rotation-invariant. Uses Ward's D2.
 
-  `"pam"`
+  `"heading_kmeans"`
 
-  :   Partitioning Around Medoids. More robust to outliers. Requires the
-      cluster package.
+  :   As `"heading_hclust"` but k-means.
 
-- distance:
+  `"heading_pam"`
 
-  Distance metric for `"hclust"` and `"pam"`. One of `"euclidean"`
-  (default), `"correlation"` (\\1 - r\\), or `"manhattan"`. Not used by
-  PCA methods or `"kmeans"`.
+  :   As `"heading_hclust"` but PAM. Requires cluster.
+
+  `"area_hclust"`
+
+  :   Pairwise area distance: the area of the polygon enclosed by two
+      paths from the shared origin, computed via the cross-product sum
+      \\\frac{1}{2}\|\sum_i (x^{(1)}\_i y^{(2)}\_i - x^{(2)}\_i
+      y^{(1)}\_i)\|\\. Paths spatially close and similarly shaped get
+      small distances. Uses Ward's D2.
+
+  `"area_pam"`
+
+  :   As `"area_hclust"` but PAM. Requires cluster.
 
 - resolution:
 
@@ -113,11 +123,6 @@ cluster_bouquet(
   values favour finer clusters. `0` = plain mean silhouette. Default
   `0.5`.
 
-- pca_variance:
-
-  Cumulative variance retained during PCA. Only used by `"pca_hclust"`
-  and `"pca_kmeans"`. Default `0.90`.
-
 - cluster_col:
 
   String. Name of the cluster column added to `data`. Default
@@ -125,29 +130,35 @@ cluster_bouquet(
 
 - normalise:
 
-  Logical. Controls the feature representation used for clustering.
-  Should match the value passed to
+  Logical. Controls path building for clustering. Should match the value
+  passed to
   [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
   so that cluster assignments align visually with the rendered paths.
+  `FALSE` (default) uses a single global \\\theta\\; `TRUE` normalises
+  per series. See
+  [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
+  for full details.
 
-  `FALSE` (default)
+- ceiling_pct:
 
-  :   Binary \\\pm 1\\/0 direction sequences. Clusters by directional
-      pattern only.
+  A single number in `(0, 1]`. Passed to path building for path-geometry
+  methods. Should match the value used in
+  [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md).
+  Default `0.80`.
 
-  `TRUE`
+- launch_deg:
 
-  :   Same binary \\\pm 1\\/0 features. Per-series angle scaling in
-      [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
-      does not change the direction sequence, so clustering is identical
-      to `FALSE`.
+  Initial heading in degrees for path building. Only used by
+  path-geometry methods. Should match
+  [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md).
+  Default `90`.
 
 - seed:
 
   Integer or `NULL`. Random seed passed to
   [`base::set.seed()`](https://rdrr.io/r/base/Random.html) before
   k-means initialisation. Ensures reproducible results for
-  `"pca_kmeans"` and `"kmeans"`. Default `NULL` = no seed
+  `"coords_kmeans"` and `"heading_kmeans"`. Default `NULL` = no seed
   (non-reproducible).
 
 - verbose:
@@ -166,37 +177,34 @@ to print them.
 
 ## Details
 
-### Feature representation
+### Feature representations
 
-Each series of length \\n\\ is represented as a vector of \\n - 1\\
-signed steps \\d_i \in \\-1, 0, +1\\\\.
+**Path coordinates** (`"coords_*"`): each series is encoded as
+\\2(n-1)\\ values \\(x_1, \ldots, x\_{n-1}, y_1, \ldots, y\_{n-1})\\.
+Directly reflects the visual plot – paths close together cluster
+together. Most intuitive for visual interpretation. This is the default.
+
+**Heading sequence** (`"heading_*"`): cumulative heading angle in
+degrees at each step. Captures the turning pattern independently of
+absolute position; rotation-invariant.
+
+**Area distance** (`"area_*"`): pairwise distance is the area of the
+polygon enclosed by two paths (shoelace formula). Captures both shape
+difference and spatial separation in a single scalar with a clean
+geometric interpretation.
 
 ### Composite k-selection
 
-Plain mean silhouette consistently selects k = 2 because two large blobs
-score globally well even when finer structure exists. The composite
-score adds a worst-cluster penalty and a resolution exponent.
+Plain mean silhouette consistently selects k = 2. The composite score
+adds a worst-cluster penalty and a resolution exponent to favour finer
+structure.
 
 ### Pairing with [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 
-Pass the same `normalise` value to both functions. When a
-`cluster_bouquet` object is piped into
+Pass the same `normalise`, `ceiling_pct`, and `launch_deg` to both
+functions. When a `cluster_bouquet` object is piped into
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md),
-the `normalise` setting is inherited automatically if
-[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
-is left at its default (`normalise = FALSE`). A warning is emitted if an
-explicit mismatch is detected.
-
-    data |>
-      cluster_bouquet(
-        time_col = date, series_col = id, value_col = gwl,
-        normalise = TRUE
-      ) |>
-      make_plot_bouquet(
-        time_col = date, series_col = id, value_col = gwl,
-        stem_colors = cluster, flower_colors = cluster
-        # normalise = TRUE is inherited automatically
-      )
+`normalise` is inherited automatically.
 
 ## See also
 
@@ -228,48 +236,77 @@ gw_long <- tibble::tibble(
   )
 )
 
-# Default: PCA + hclust, auto k, binary features
+# Default: path-coordinate clustering (coords_hclust), auto k
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
-
-# Inspect the result
 summary(clustered)
 #> -- cluster_bouquet summary ----------------------------------------------
-#>   Method    : pca_hclust
-#>   Distance  : euclidean (unused)
+#>   Method    : coords_hclust
 #>   Normalise : FALSE
 #>   Seed      : none
-#>   Series    : 6   k = 4   Resolution = 0.50
-#>   Mean silhouette : 0.053  (weak structure -- consider more data or fewer clusters)
+#>   Series    : 6   k = 3   Resolution = 0.50
+#>   Mean silhouette : 0.364  (reasonable structure)
 #> 
 #>   Auto k selection (composite silhouette score):
-#>     k = 2 : 0.0063
-#>     k = 3 : 0.0011
-#>     k = 4 : 0.0533  <-- selected
-#>     k = 5 : 0.0302
+#>     k = 2 : 0.2077
+#>     k = 3 : 0.3641  <-- selected
+#>     k = 4 : 0.2998
+#>     k = 5 : 0.1471
 #> 
 #>   Cluster sizes and members:
-#>     C1  (2 series, mean sil = 0.069)
-#>        S1, S4
-#>     C2  (2 series, mean sil = 0.090)
-#>        S3, S6
+#>     C1  (3 series, mean sil = 0.399)
+#>        S1, S4, S5
+#>     C2  (2 series, mean sil = 0.493)
+#>        S2, S6
 #>     C3  (1 series, mean sil = 0.000)
-#>        S2
-#>     C4  (1 series, mean sil = 0.000)
-#>        S5
+#>        S3
 #> 
 #>   Per-series silhouette widths:
-#>     S1                    C1   0.074  |
-#>     S4                    C1   0.065  |
-#>     S3                    C2   0.110  ||
-#>     S6                    C2   0.071  |
-#>     S2                    C3   0.000  
-#>     S5                    C4   0.000  
+#>     S5                    C1   0.553  |||||||||||
+#>     S1                    C1   0.375  ||||||||
+#>     S4                    C1   0.269  |||||
+#>     S2                    C2   0.590  ||||||||||||
+#>     S6                    C2   0.396  ||||||||
+#>     S3                    C3   0.000  
 #> ------------------------------------------------------------------------
 
-# Plot silhouette scores across k to inspect the elbow
+# Path-coordinate clustering -- most visually intuitive
 # \donttest{
-plot_cluster_quality(clustered)
+cluster_bouquet(gw_long,
+  time_col = week, series_col = station, value_col = level_m,
+  method = "coords_hclust")
+#> # A tibble: 312 × 4
+#>    week       station level_m cluster
+#>    <date>     <chr>     <dbl> <fct>  
+#>  1 2023-01-01 S1         8.77 C1     
+#>  2 2023-01-08 S1         8.76 C1     
+#>  3 2023-01-15 S1         8.93 C1     
+#>  4 2023-01-22 S1         9.15 C1     
+#>  5 2023-01-29 S1         9.32 C1     
+#>  6 2023-02-05 S1         9.38 C1     
+#>  7 2023-02-12 S1         9.76 C1     
+#>  8 2023-02-19 S1         9.81 C1     
+#>  9 2023-02-26 S1        10.3  C1     
+#> 10 2023-03-05 S1        10.3  C1     
+#> # ℹ 302 more rows
 
+# Area-based clustering
+cluster_bouquet(gw_long,
+  time_col = week, series_col = station, value_col = level_m,
+  method = "area_hclust")
+#> # A tibble: 312 × 4
+#>    week       station level_m cluster
+#>    <date>     <chr>     <dbl> <fct>  
+#>  1 2023-01-01 S1         8.77 C1     
+#>  2 2023-01-08 S1         8.76 C1     
+#>  3 2023-01-15 S1         8.93 C1     
+#>  4 2023-01-22 S1         9.15 C1     
+#>  5 2023-01-29 S1         9.32 C1     
+#>  6 2023-02-05 S1         9.38 C1     
+#>  7 2023-02-12 S1         9.76 C1     
+#>  8 2023-02-19 S1         9.81 C1     
+#>  9 2023-02-26 S1        10.3  C1     
+#> 10 2023-03-05 S1        10.3  C1     
+#> # ℹ 302 more rows
 # }
 ```

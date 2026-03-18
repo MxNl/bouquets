@@ -153,55 +153,164 @@ make_plot_bouquet(
 ## Clustering
 
 [`cluster_bouquet()`](https://mxnl.github.io/bouquets/reference/cluster_bouquet.md)
-adds a `cluster` column to the data. It returns a `cluster_bouquet`
-object: a normal tibble that also carries clustering diagnostics. Call
-[`summary()`](https://rdrr.io/r/base/summary.html) to inspect them.
+builds the actual bouquet paths and clusters series based on path
+geometry. Three approaches are available:
+
+- **`"coords_*"`** — clusters on the flattened (x, y) path coordinates.
+  Paths that look similar in the plot cluster together. This is the
+  default.
+- **`"heading_*"`** — clusters on the cumulative heading sequence.
+  Captures turning-pattern similarity independently of absolute
+  position.
+- **`"area_*"`** — uses the shoelace area between pairs of paths as the
+  distance. Captures both shape difference and spatial separation in a
+  single scalar.
+
+Each family offers `_hclust` (Ward’s D2, deterministic), `_kmeans`, and
+`_pam` (Partitioning Around Medoids) variants.
 
 ``` r
 clustered <- cluster_bouquet(
   gw_long,
   time_col   = week,
   series_col = station,
-  value_col  = level_m,
-  seed       = 42L
+  value_col  = level_m
 )
 
 summary(clustered)
 ```
 
     ## -- cluster_bouquet summary ----------------------------------------------
-    ##   Method    : pca_hclust
-    ##   Distance  : euclidean (unused)
+    ##   Method    : coords_hclust
     ##   Normalise : FALSE
-    ##   Seed      : 42
-    ##   Series    : 8   k = 3   Resolution = 0.50
-    ##   Mean silhouette : 0.031  (weak structure -- consider more data or fewer clusters)
+    ##   Seed      : none
+    ##   Series    : 8   k = 4   Resolution = 0.50
+    ##   Mean silhouette : 0.410  (reasonable structure)
     ## 
     ##   Auto k selection (composite silhouette score):
-    ##     k = 2 : 0.0020
-    ##     k = 3 : 0.0311  <-- selected
-    ##     k = 4 : 0.0154
-    ##     k = 5 : -0.0040
-    ##     k = 6 : -0.0013
-    ##     k = 7 : -0.0074
+    ##     k = 2 : 0.2440
+    ##     k = 3 : 0.3125
+    ##     k = 4 : 0.4102  <-- selected
+    ##     k = 5 : 0.3273
+    ##     k = 6 : 0.2600
+    ##     k = 7 : 0.1051
     ## 
     ##   Cluster sizes and members:
-    ##     C1  (5 series, mean sil = 0.033)
-    ##        S1, S2, S5, S6, S7
-    ##     C2  (2 series, mean sil = 0.041)
-    ##        S3, S4
-    ##     C3  (1 series, mean sil = 0.000)
-    ##        S8
+    ##     C1  (3 series, mean sil = 0.501)
+    ##        S2, S4, S6
+    ##     C2  (2 series, mean sil = 0.699)
+    ##        S1, S3
+    ##     C3  (2 series, mean sil = 0.190)
+    ##        S7, S8
+    ##     C4  (1 series, mean sil = 0.000)
+    ##        S5
     ## 
     ##   Per-series silhouette widths:
-    ##     S5                    C1   0.062  |
-    ##     S6                    C1   0.035  |
-    ##     S2                    C1   0.031  |
-    ##     S7                    C1   0.029  |
-    ##     S1                    C1   0.011  
-    ##     S4                    C2   0.075  |
-    ##     S3                    C2   0.006  
-    ##     S8                    C3   0.000  
+    ##     S4                    C1   0.568  |||||||||||
+    ##     S6                    C1   0.491  ||||||||||
+    ##     S2                    C1   0.445  |||||||||
+    ##     S1                    C2   0.723  ||||||||||||||
+    ##     S3                    C2   0.674  |||||||||||||
+    ##     S8                    C3   0.246  |||||
+    ##     S7                    C3   0.134  |||
+    ##     S5                    C4   0.000  
+    ## ------------------------------------------------------------------------
+
+### Heading-based clustering
+
+Use `"heading_hclust"` when you want to group by curvature pattern
+regardless of where a path ends up spatially:
+
+``` r
+cluster_bouquet(
+  gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  method     = "heading_hclust"
+) |> summary()
+```
+
+    ## -- cluster_bouquet summary ----------------------------------------------
+    ##   Method    : heading_hclust
+    ##   Normalise : FALSE
+    ##   Seed      : none
+    ##   Series    : 8   k = 2   Resolution = 0.50
+    ##   Mean silhouette : 0.537  (strong structure)
+    ## 
+    ##   Auto k selection (composite silhouette score):
+    ##     k = 2 : 0.3771  <-- selected
+    ##     k = 3 : 0.1416
+    ##     k = 4 : 0.2996
+    ##     k = 5 : 0.2419
+    ##     k = 6 : 0.1254
+    ##     k = 7 : 0.0194
+    ## 
+    ##   Cluster sizes and members:
+    ##     C1  (6 series, mean sil = 0.497)
+    ##        S2, S4, S5, S6, S7, S8
+    ##     C2  (2 series, mean sil = 0.658)
+    ##        S1, S3
+    ## 
+    ##   Per-series silhouette widths:
+    ##     S6                    C1   0.631  |||||||||||||
+    ##     S2                    C1   0.603  ||||||||||||
+    ##     S5                    C1   0.592  ||||||||||||
+    ##     S4                    C1   0.577  ||||||||||||
+    ##     S7                    C1   0.425  ||||||||
+    ##     S8                    C1   0.152  |||
+    ##     S3                    C2   0.692  ||||||||||||||
+    ##     S1                    C2   0.624  ||||||||||||
+    ## ------------------------------------------------------------------------
+
+### Area-based clustering
+
+`"area_hclust"` captures both shape and spatial proximity in a single
+geometric distance — two paths that enclose a small area between them
+are considered similar:
+
+``` r
+cluster_bouquet(
+  gw_long,
+  time_col   = week,
+  series_col = station,
+  value_col  = level_m,
+  method     = "area_hclust"
+) |> summary()
+```
+
+    ## -- cluster_bouquet summary ----------------------------------------------
+    ##   Method    : area_hclust
+    ##   Normalise : FALSE
+    ##   Seed      : none
+    ##   Series    : 8   k = 3   Resolution = 0.50
+    ##   Mean silhouette : 0.684  (strong structure)
+    ## 
+    ##   Auto k selection (composite silhouette score):
+    ##     k = 2 : 0.1894
+    ##     k = 3 : 0.6200  <-- selected
+    ##     k = 4 : 0.5897
+    ##     k = 5 : 0.4084
+    ##     k = 6 : 0.2883
+    ##     k = 7 : 0.1116
+    ## 
+    ##   Cluster sizes and members:
+    ##     C1  (3 series, mean sil = 0.769)
+    ##        S2, S4, S6
+    ##     C2  (3 series, mean sil = 0.524)
+    ##        S5, S7, S8
+    ##     C3  (2 series, mean sil = 0.795)
+    ##        S1, S3
+    ## 
+    ##   Per-series silhouette widths:
+    ##     S4                    C1   0.860  |||||||||||||||||
+    ##     S6                    C1   0.801  ||||||||||||||||
+    ##     S2                    C1   0.646  |||||||||||||
+    ##     S8                    C2   0.728  |||||||||||||||
+    ##     S5                    C2   0.467  |||||||||
+    ##     S7                    C2   0.376  ||||||||
+    ##     S1                    C3   0.812  ||||||||||||||||
+    ##     S3                    C3   0.777  ||||||||||||||||
     ## ------------------------------------------------------------------------
 
 ### Visualise cluster quality
@@ -229,7 +338,7 @@ make_plot_bouquet(
   value_col     = level_m,
   stem_colors   = cluster,
   flower_colors = cluster,
-  title         = "Stations coloured by directional cluster"
+  title         = "Stations coloured by path-geometry cluster"
 )
 ```
 

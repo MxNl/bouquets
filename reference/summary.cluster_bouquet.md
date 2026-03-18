@@ -39,29 +39,26 @@ gw <- tibble::tibble(
 )
 summary(cluster_bouquet(gw, week, station, level))
 #> -- cluster_bouquet summary ----------------------------------------------
-#>   Method    : pca_hclust
-#>   Distance  : euclidean (unused)
+#>   Method    : coords_hclust
 #>   Normalise : FALSE
 #>   Seed      : none
-#>   Series    : 4   k = 3   Resolution = 0.50
-#>   Mean silhouette : 0.072  (weak structure -- consider more data or fewer clusters)
+#>   Series    : 4   k = 2   Resolution = 0.50
+#>   Mean silhouette : 0.347  (reasonable structure)
 #> 
 #>   Auto k selection (composite silhouette score):
-#>     k = 2 : 0.0349
-#>     k = 3 : 0.0716  <-- selected
+#>     k = 2 : 0.3472  <-- selected
+#>     k = 3 : 0.1765
 #> 
 #>   Cluster sizes and members:
-#>     C1  (2 series, mean sil = 0.143)
-#>        S1, S4
+#>     C1  (3 series, mean sil = 0.463)
+#>        S1, S3, S4
 #>     C2  (1 series, mean sil = 0.000)
 #>        S2
-#>     C3  (1 series, mean sil = 0.000)
-#>        S3
 #> 
 #>   Per-series silhouette widths:
-#>     S4                    C1   0.158  |||
-#>     S1                    C1   0.129  |||
+#>     S1                    C1   0.587  ||||||||||||
+#>     S4                    C1   0.462  |||||||||
+#>     S3                    C1   0.340  |||||||
 #>     S2                    C2   0.000  
-#>     S3                    C3   0.000  
 #> ------------------------------------------------------------------------
 ```

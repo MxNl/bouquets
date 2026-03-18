@@ -77,30 +77,27 @@ per-series silhouette widths.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="cluster_bouquet.html">cluster_bouquet</a></span><span class="op">(</span><span class="va">gw</span>, <span class="va">week</span>, <span class="va">station</span>, <span class="va">level</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -- cluster_bouquet summary ----------------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Method    : pca_hclust</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Distance  : euclidean (unused)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Method    : coords_hclust</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Normalise : FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Seed      : none</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Series    : 4   k = 3   Resolution = 0.50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean silhouette : 0.072  (weak structure -- consider more data or fewer clusters)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Series    : 4   k = 2   Resolution = 0.50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Mean silhouette : 0.347  (reasonable structure)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Auto k selection (composite silhouette score):</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 2 : 0.0349</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 3 : 0.0716  &lt;-- selected</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 2 : 0.3472  &lt;-- selected</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     k = 3 : 0.1765</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cluster sizes and members:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     C1  (2 series, mean sil = 0.143)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        S1, S4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     C1  (3 series, mean sil = 0.463)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        S1, S3, S4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     C2  (1 series, mean sil = 0.000)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>        S2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     C3  (1 series, mean sil = 0.000)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        S3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Per-series silhouette widths:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     S4                    C1   0.158  |||</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     S1                    C1   0.129  |||</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S1                    C1   0.587  ||||||||||||</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S4                    C1   0.462  |||||||||</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     S3                    C1   0.340  |||||||</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     S2                    C2   0.000  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     S3                    C3   0.000  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------------------------------------------</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
