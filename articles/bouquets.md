@@ -92,7 +92,8 @@ make_plot_bouquet(
 ## Highlighting individual series
 
 Use `highlight` to bring specific series to the foreground; all others
-are dimmed to a pale grey.
+are dimmed to a pale grey. Highlighted series are drawn on top so they
+are never obscured by dimmed paths.
 
 ``` r
 make_plot_bouquet(
@@ -108,6 +109,49 @@ make_plot_bouquet(
     ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
 
 ![](bouquets_files/figure-html/highlight-1.png)
+
+## Series labels
+
+`show_labels = TRUE` prints each series name next to its flower, offset
+along the final heading direction. This is especially useful when the
+legend is hidden (`hide_legend_after`) or for quick identification
+without hovering. By default labels inherit the flower colour; pass
+`label_color` for a uniform colour:
+
+``` r
+make_plot_bouquet(
+  gw_long,
+  time_col          = week,
+  series_col        = station,
+  value_col         = level_m,
+  show_labels       = TRUE,
+  hide_legend_after = 1L,     # suppress legend so labels carry the id
+  title             = "Series identified by direct labels"
+)
+```
+
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
+
+![](bouquets_files/figure-html/labels-1.png)
+
+``` r
+make_plot_bouquet(
+  gw_long,
+  time_col          = week,
+  series_col        = station,
+  value_col         = level_m,
+  stem_colors       = region,
+  flower_colors     = region,
+  show_labels       = TRUE,
+  label_color       = "#1a1a2e",
+  hide_legend_after = 1L,
+  title             = "Labels in a single dark colour"
+)
+```
+
+    ## <bouquet_plot>  8 series | theta = 11.1 deg | binding: S5
+
+![](bouquets_files/figure-html/labels-color-1.png)
 
 ## Time window filter
 
@@ -431,8 +475,7 @@ gw_long |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
-    value_col  = level_m,
-    seed       = 42L
+    value_col  = level_m
   ) |>
   make_plot_bouquet(
     time_col      = week,
