@@ -204,7 +204,8 @@ summary(clustered)
 #> -- cluster_bouquet summary ----------------------------------------------
 #>   Method    : pca_hclust
 #>   Distance  : euclidean (unused)
-#>   Seed      : 42
+#>   Normalise : FALSE
+#>   Seed      : none
 #>   Series    : 6   k = 4   Resolution = 0.50
 #>   Mean silhouette : 0.053  (weak structure -- consider more data or fewer clusters)
 #> 

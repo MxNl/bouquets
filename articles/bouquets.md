@@ -172,6 +172,7 @@ summary(clustered)
     ## -- cluster_bouquet summary ----------------------------------------------
     ##   Method    : pca_hclust
     ##   Distance  : euclidean (unused)
+    ##   Normalise : FALSE
     ##   Seed      : 42
     ##   Series    : 8   k = 3   Resolution = 0.50
     ##   Mean silhouette : 0.031  (weak structure -- consider more data or fewer clusters)

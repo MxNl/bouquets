@@ -205,12 +205,33 @@ make_plot_bouquet(
 
 - normalise:
 
-  Logical. When `TRUE`, each series is assigned its own per-series
-  \\\theta\\ so that every series uses the full angular range
-  independently of how volatile it is. This makes shape comparison
-  easier when series have very different volatility. When `FALSE`
-  (default) all series share a single global \\\theta\\ derived from the
-  most volatile series.
+  Controls how the turning angle \\\theta\\ is derived. Three options
+  are accepted:
+
+  `FALSE` (default)
+
+  :   All series share a single global \\\theta\\ derived from the most
+      volatile series (the one with the greatest cumulative binary
+      sweep). Turn direction is binarised to \\\pm 1\\ / 0, so only the
+      direction of change is encoded, not its magnitude. Best for
+      comparing directional dynamics on a common scale.
+
+  `TRUE`
+
+  :   Each series is assigned its own per-series \\\theta\\ so that
+      every path uses the full angular range independently of
+      volatility. Useful for shape comparison when series have very
+      different variances; magnitude differences are suppressed.
+
+  `"magnitude"`
+
+  :   Turn angle at each step is proportional to the raw signed delta
+      value rather than its sign alone. Calibrated globally so the
+      series with the widest value range sweeps
+      `ceiling_pct \(\times\) 360\(^\circ\)`. This preserves amplitude
+      information and enables magnitude comparison across series: a
+      large jump bends the path more than a small one, and paths for
+      volatile series curve more than flat ones.
 
 - verbose:
 

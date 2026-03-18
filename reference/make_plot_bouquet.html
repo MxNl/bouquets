@@ -240,12 +240,31 @@ after this value are dropped. <code>NULL</code> = no filter.</p></dd>
 
 
 <dt id="arg-normalise">normalise<a class="anchor" aria-label="anchor" href="#arg-normalise"></a></dt>
-<dd><p>Logical. When <code>TRUE</code>, each series is assigned its own
-per-series \(\theta\) so that every series uses the full angular range
-independently of how volatile it is. This makes shape comparison easier
-when series have very different volatility. When <code>FALSE</code> (default) all
-series share a single global \(\theta\) derived from the most volatile
-series.</p></dd>
+<dd><p>Controls how the turning angle \(\theta\) is derived.
+Three options are accepted:</p><dl><dt><code>FALSE</code> (default)</dt>
+<dd><p>All series share a single global \(\theta\)
+derived from the most volatile series (the one with the greatest
+cumulative binary sweep). Turn direction is binarised to
+\(\pm 1\) / 0, so only the direction of change is encoded, not its
+magnitude. Best for comparing directional dynamics on a common scale.</p></dd>
+
+<dt><code>TRUE</code></dt>
+<dd><p>Each series is assigned its own per-series \(\theta\)
+so that every path uses the full angular range independently of
+volatility. Useful for shape comparison when series have very
+different variances; magnitude differences are suppressed.</p></dd>
+
+<dt><code>"magnitude"</code></dt>
+<dd><p>Turn angle at each step is proportional to the
+raw signed delta value rather than its sign alone. Calibrated globally
+so the series with the widest value range sweeps <code>ceiling_pct
+      \(\times\) 360\(^\circ\)</code>. This preserves amplitude information
+and enables magnitude comparison across series: a large jump bends the
+path more than a small one, and paths for volatile series curve more
+than flat ones.</p></dd>
+
+
+</dl></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>

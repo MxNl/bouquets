@@ -41,7 +41,8 @@ summary(cluster_bouquet(gw, week, station, level))
 #> -- cluster_bouquet summary ----------------------------------------------
 #>   Method    : pca_hclust
 #>   Distance  : euclidean (unused)
-#>   Seed      : 42
+#>   Normalise : FALSE
+#>   Seed      : none
 #>   Series    : 4   k = 3   Resolution = 0.50
 #>   Mean silhouette : 0.072  (weak structure -- consider more data or fewer clusters)
 #> 
