@@ -16,7 +16,8 @@ cluster_bouquet(
   resolution = 0.5,
   pca_variance = 0.9,
   cluster_col = "cluster",
-  seed = 42L,
+  normalise = FALSE,
+  seed = NULL,
   verbose = FALSE
 )
 }
@@ -70,10 +71,20 @@ Default \code{0.5}.}
 \item{cluster_col}{String. Name of the cluster column added to \code{data}.
 Default \code{"cluster"}.}
 
+\item{normalise}{Logical. Controls the feature representation used for
+clustering. Should match the value passed to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so
+that cluster assignments align visually with the rendered paths.
+\describe{
+\item{\code{FALSE} (default)}{Binary \eqn{\pm 1}/0 direction sequences.
+Clusters by directional pattern only.}
+\item{\code{TRUE}}{Same binary \eqn{\pm 1}/0 features. Per-series angle
+scaling in \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} does not change the direction
+sequence, so clustering is identical to \code{FALSE}.}
+}}
+
 \item{seed}{Integer or \code{NULL}. Random seed passed to \code{\link[base:Random]{base::set.seed()}}
 before k-means initialisation. Ensures reproducible results for
-\code{"pca_kmeans"} and \code{"kmeans"}. \code{NULL} = no seed (non-reproducible).
-Default \code{42L}.}
+\code{"pca_kmeans"} and \code{"kmeans"}. Default \code{NULL} = no seed (non-reproducible).}
 
 \item{verbose}{Logical. Print k selection table, chosen k, silhouette score,
 and cluster sizes. Default \code{FALSE}.}
@@ -86,11 +97,12 @@ attribute containing all clustering diagnostics; use
 \code{\link[=summary.cluster_bouquet]{summary.cluster_bouquet()}} to print them.
 }
 \description{
-Encodes each time series as a sequence of signed directional steps
-(\eqn{+1} increase, \eqn{-1} decrease, \eqn{0} no change) and clusters
-the series based on the similarity of those sequences. The resulting
-\code{cluster} column can be passed directly to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} via
-\code{stem_colors}, \code{flower_colors}, \code{facet_by}, or \code{cluster_hull}.
+Encodes each time series as a feature vector and clusters the series based
+on similarity of those sequences. The feature representation is controlled
+by \code{normalise} and should match the value used in \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so
+that cluster assignments align visually with the rendered paths. The
+resulting \code{cluster} column can be passed directly to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}
+via \code{stem_colors}, \code{flower_colors}, \code{facet_by}, or \code{cluster_hull}.
 
 The returned object is both the original \code{data} tibble (with an added
 cluster column) \strong{and} a \code{cluster_bouquet} S3 object. Call
@@ -113,12 +125,21 @@ adds a worst-cluster penalty and a resolution exponent.
 
 \subsection{Pairing with \code{make_plot_bouquet()}}{
 
+Pass the same \code{normalise} value to both functions. When a \code{cluster_bouquet}
+object is piped into \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}, the \code{normalise} setting is
+inherited automatically if \code{make_plot_bouquet()} is left at its default
+(\code{normalise = FALSE}). A warning is emitted if an explicit mismatch is
+detected.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{data |>
-  cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
+  cluster_bouquet(
+    time_col = date, series_col = id, value_col = gwl,
+    normalise = TRUE
+  ) |>
   make_plot_bouquet(
-    time_col      = date,   series_col    = id,   value_col = gwl,
-    stem_colors   = cluster, flower_colors = cluster,
-    lon_col = lon, lat_col = lat, cluster_hull = cluster
+    time_col = date, series_col = id, value_col = gwl,
+    stem_colors = cluster, flower_colors = cluster
+    # normalise = TRUE is inherited automatically
   )
 }\if{html}{\out{</div>}}
 }
@@ -142,7 +163,7 @@ gw_long <- tibble::tibble(
   )
 )
 
-# Default: PCA + hclust, auto k
+# Default: PCA + hclust, auto k, binary features
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
 

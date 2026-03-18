@@ -15,6 +15,8 @@ make_plot_bouquet(
   ceiling_pct = 0.8,
   launch_deg = 90,
   marker_every = NULL,
+  show_labels = FALSE,
+  label_color = NULL,
   show_rings = FALSE,
   dark_mode = FALSE,
   title = NULL,
@@ -76,8 +78,22 @@ maximum angle to use as \eqn{\theta}. Default \code{0.80}.}
 \item{launch_deg}{Initial heading in degrees (counter-clockwise from
 positive x-axis). \code{90} = straight up. Defaults to \code{90}.}
 
-\item{marker_every}{Positive integer. A dot is plotted at every
-\code{marker_every}-th step. \code{NULL} (default) = no markers.}
+\item{marker_every}{Controls step-markers. Either a positive integer (a dot
+every n-th step) or one of the time-frequency keywords \code{"year"},
+\code{"quarter"}, \code{"month"}, \code{"week"}, or \code{"day"}. For keywords, the
+equivalent integer step count is estimated from the median interval of
+\code{time_col}. Keywords require \code{time_col} to be a \code{Date} or \code{POSIXct}
+vector; non-date columns fall back to \code{marker_every = 1} with a warning.
+\code{NULL} (default) = no markers.}
+
+\item{show_labels}{Logical. When \code{TRUE}, the series name is printed next to
+each flower symbol, offset in the direction of the final heading. Useful
+when the legend is suppressed (e.g. when \code{n_series >= hide_legend_after})
+or for single-panel identification. Default \code{FALSE}.}
+
+\item{label_color}{Single colour string (e.g. \code{"#333333"}) applied to all
+series labels when \code{show_labels = TRUE}. \code{NULL} (default) colours each
+label to match its flower.}
 
 \item{show_rings}{Logical. Draw faint concentric reference rings. Default
 \code{FALSE}.}
@@ -138,25 +154,17 @@ before this value are dropped before computing paths. \code{NULL} = no filter.}
 \item{to}{Optional scalar of the same class as \code{time_col}. Observations
 after this value are dropped. \code{NULL} = no filter.}
 
-\item{normalise}{Controls how the turning angle \eqn{\theta} is derived.
-Three options are accepted:
+\item{normalise}{Logical. Controls how the turning angle \eqn{\theta} is
+derived.
 \describe{
-\item{\code{FALSE} (default)}{All series share a single global \eqn{\theta}
-derived from the most volatile series (the one with the greatest
-cumulative binary sweep). Turn direction is binarised to
+\item{\code{FALSE} (default)}{All series share a single global
+\eqn{\theta} derived from the most volatile series (the one with the
+greatest cumulative binary sweep). Turn direction is binarised to
 \eqn{\pm 1} / 0, so only the direction of change is encoded, not its
 magnitude. Best for comparing directional dynamics on a common scale.}
-\item{\code{TRUE}}{Each series is assigned its own per-series \eqn{\theta}
-so that every path uses the full angular range independently of
-volatility. Useful for shape comparison when series have very
-different variances; magnitude differences are suppressed.}
-\item{\code{"magnitude"}}{Turn angle at each step is proportional to the
-raw signed delta value rather than its sign alone. Calibrated globally
-so the series with the widest value range sweeps \code{ceiling_pct
-      \eqn{\times} 360\eqn{^\circ}}. This preserves amplitude information
-and enables magnitude comparison across series: a large jump bends the
-path more than a small one, and paths for volatile series curve more
-than flat ones.}
+\item{\code{TRUE}}{Each series gets its own per-series \eqn{\theta} so
+every path uses the full angular range independently of volatility.
+Useful for shape comparison when series have very different variances.}
 }}
 
 \item{verbose}{Logical. Print angle diagnostics to the console. Default
