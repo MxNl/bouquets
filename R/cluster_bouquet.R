@@ -55,11 +55,11 @@
 #'   clustering. Should match the value passed to [make_plot_bouquet()] so
 #'   that cluster assignments align visually with the rendered paths.
 #'   \describe{
-#'     \item{`FALSE` (default)}{Binary \eqn{\pm 1}/0 direction sequences.
+#'     \item{\code{FALSE} (default)}{Binary \eqn{\pm 1}/0 direction sequences.
 #'       Clusters by directional pattern only.}
-#'     \item{`TRUE`}{Same binary \eqn{\pm 1}/0 features. Per-series angle
+#'     \item{\code{TRUE}}{Same binary \eqn{\pm 1}/0 features. Per-series angle
 #'       scaling in [make_plot_bouquet()] does not change the direction
-#'       sequence, so clustering is identical to `FALSE`.}
+#'       sequence, so clustering is identical to \code{FALSE}.}
 #'   }
 #' @param seed Integer or `NULL`. Random seed passed to [base::set.seed()]
 #'   before k-means initialisation. Ensures reproducible results for

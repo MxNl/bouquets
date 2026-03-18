@@ -229,11 +229,7 @@ sample_groups <- function(df, col, n) {
 }
 
 
-# remove "magnitude" option for normalisation and remove all related documentation and code parts
-# add argument to annotate the time series name next to the flower
 # clustering method needs some tuning as the clusters visually from the plot are not really logical or consistent
-# seed argument in cluster_bouquet default to NULL
-# improve marker_every by giving key words like year, month, week, quarter, day like in lubridate to show markers at new year/new month etc.
 # replace hues package for colours by another modern colour palette that also adresses colourblind friendliness
 
 

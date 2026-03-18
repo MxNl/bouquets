@@ -472,14 +472,14 @@
 #' @param normalise Logical. Controls how the turning angle \eqn{\theta} is
 #'   derived.
 #'   \describe{
-#'     \item{`FALSE` (default)}{All series share a single global \eqn{\theta}
-#'       derived from the most volatile series (the one with the greatest
-#'       cumulative binary sweep). Turn direction is binarised to \eqn{\pm 1}
-#'       / 0, so only the direction of change is encoded, not its magnitude.
-#'       Best for comparing directional dynamics on a common scale.}
-#'     \item{`TRUE`}{Each series gets its own per-series \eqn{\theta} so every
-#'       path uses the full angular range independently of volatility. Useful
-#'       for shape comparison when series have very different variances.}
+#'     \item{\code{FALSE} (default)}{All series share a single global
+#'       \eqn{\theta} derived from the most volatile series (the one with the
+#'       greatest cumulative binary sweep). Turn direction is binarised to
+#'       \eqn{\pm 1} / 0, so only the direction of change is encoded, not its
+#'       magnitude. Best for comparing directional dynamics on a common scale.}
+#'     \item{\code{TRUE}}{Each series gets its own per-series \eqn{\theta} so
+#'       every path uses the full angular range independently of volatility.
+#'       Useful for shape comparison when series have very different variances.}
 #'   }
 #' @param verbose Logical. Print angle diagnostics to the console. Default
 #'   `FALSE`.
@@ -838,18 +838,57 @@ make_plot_bouquet <- function(
       inherit.aes = FALSE, color = ring_col, alpha = ring_alpha, linewidth = 0.3
     )
 
-  p <- p + ggplot2::geom_path(
-    ggplot2::aes(alpha = .data$.alpha),
-    linewidth = 1.1, lineend = "round", linejoin = "round"
-  ) +
-    ggplot2::scale_alpha_identity()
-
-  if (!is.null(marker_every))
-    p <- p + ggplot2::geom_point(
-      data  = dplyr::filter(path_data, .data$step %% marker_every == 1L),
-      ggplot2::aes(fill = .data$series),
-      shape = 21L, size = 2.0, color = bg_col, stroke = 0.6
+  # -- Draw paths ----------------------------------------------------------------
+  # When highlight is active, draw dimmed series first and highlighted on top
+  # so highlighted paths are never obscured by greyed-out ones.
+  if (!is.null(highlight)) {
+    path_dim <- dplyr::filter(path_data,
+                              !as.character(.data$series) %in% as.character(highlight))
+    path_hl  <- dplyr::filter(path_data,
+                               as.character(.data$series) %in% as.character(highlight))
+    p <- p +
+      ggplot2::geom_path(
+        data      = path_dim,
+        ggplot2::aes(alpha = .data$.alpha),
+        linewidth = 1.1, lineend = "round", linejoin = "round"
+      ) +
+      ggplot2::geom_path(
+        data      = path_hl,
+        ggplot2::aes(alpha = .data$.alpha),
+        linewidth = 1.1, lineend = "round", linejoin = "round"
+      )
+  } else {
+    p <- p + ggplot2::geom_path(
+      ggplot2::aes(alpha = .data$.alpha),
+      linewidth = 1.1, lineend = "round", linejoin = "round"
     )
+  }
+  p <- p + ggplot2::scale_alpha_identity()
+
+  if (!is.null(marker_every)) {
+    marker_data <- dplyr::filter(path_data, .data$step %% marker_every == 1L)
+    if (!is.null(highlight)) {
+      p <- p +
+        ggplot2::geom_point(
+          data  = dplyr::filter(marker_data,
+                                !as.character(.data$series) %in% as.character(highlight)),
+          ggplot2::aes(fill = .data$series),
+          shape = 21L, size = 2.0, color = bg_col, stroke = 0.6
+        ) +
+        ggplot2::geom_point(
+          data  = dplyr::filter(marker_data,
+                                 as.character(.data$series) %in% as.character(highlight)),
+          ggplot2::aes(fill = .data$series),
+          shape = 21L, size = 2.0, color = bg_col, stroke = 0.6
+        )
+    } else {
+      p <- p + ggplot2::geom_point(
+        data  = marker_data,
+        ggplot2::aes(fill = .data$series),
+        shape = 21L, size = 2.0, color = bg_col, stroke = 0.6
+      )
+    }
+  }
 
   p <- p +
     ggplot2::annotate("point", x = 0, y = 0,
@@ -862,29 +901,75 @@ make_plot_bouquet <- function(
     dplyr::ungroup() |>
     dplyr::mutate(flower_col = unname(flower_colors_resolved[.data$series]))
 
-  p <- p + ggplot2::geom_text(
-    data        = end_data,
-    mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                               label = "\u273f", color = I(.data$flower_col)),
-    inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
-  )
+  # Flowers: dimmed first, highlighted on top
+  if (!is.null(highlight)) {
+    end_dim <- dplyr::filter(end_data,
+                             !as.character(.data$series) %in% as.character(highlight))
+    end_hl  <- dplyr::filter(end_data,
+                              as.character(.data$series) %in% as.character(highlight))
+    p <- p +
+      ggplot2::geom_text(
+        data        = end_dim,
+        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
+                                   label = "\u273f", color = I(.data$flower_col)),
+        inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
+      ) +
+      ggplot2::geom_text(
+        data        = end_hl,
+        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
+                                   label = "\u273f", color = I(.data$flower_col)),
+        inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
+      )
+  } else {
+    p <- p + ggplot2::geom_text(
+      data        = end_data,
+      mapping     = ggplot2::aes(x = .data$x, y = .data$y,
+                                 label = "\u273f", color = I(.data$flower_col)),
+      inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
+    )
+  }
 
   if (show_labels) {
-    label_offset <- max(sqrt(path_data$x^2 + path_data$y^2), na.rm = TRUE) * 0.06
+    label_offset <- extent * 0.06
     label_data <- end_data |>
       dplyr::mutate(
-        lx          = .data$x + label_offset * cos(.data$heading_deg * pi / 180),
-        ly          = .data$y + label_offset * sin(.data$heading_deg * pi / 180),
-        label_col   = if (is.null(label_color)) .data$flower_col else label_color
+        lx        = .data$x + label_offset * cos(.data$heading_deg * pi / 180),
+        ly        = .data$y + label_offset * sin(.data$heading_deg * pi / 180),
+        label_col = if (is.null(label_color)) .data$flower_col else label_color
       )
-    p <- p + ggplot2::geom_text(
-      data        = label_data,
-      mapping     = ggplot2::aes(x = .data$lx, y = .data$ly,
-                                 label = .data$series,
-                                 color = I(.data$label_col)),
-      inherit.aes = FALSE, size = 3.0, family = "sans",
-      show.legend = FALSE, fontface = "bold"
-    )
+    # Labels: dimmed first, highlighted on top
+    if (!is.null(highlight)) {
+      lbl_dim <- dplyr::filter(label_data,
+                               !as.character(.data$series) %in% as.character(highlight))
+      lbl_hl  <- dplyr::filter(label_data,
+                                as.character(.data$series) %in% as.character(highlight))
+      p <- p +
+        ggplot2::geom_text(
+          data        = lbl_dim,
+          mapping     = ggplot2::aes(x = .data$lx, y = .data$ly,
+                                     label = .data$series,
+                                     color = I(.data$label_col)),
+          inherit.aes = FALSE, size = 3.0, family = "sans",
+          show.legend = FALSE, fontface = "bold"
+        ) +
+        ggplot2::geom_text(
+          data        = lbl_hl,
+          mapping     = ggplot2::aes(x = .data$lx, y = .data$ly,
+                                     label = .data$series,
+                                     color = I(.data$label_col)),
+          inherit.aes = FALSE, size = 3.0, family = "sans",
+          show.legend = FALSE, fontface = "bold"
+        )
+    } else {
+      p <- p + ggplot2::geom_text(
+        data        = label_data,
+        mapping     = ggplot2::aes(x = .data$lx, y = .data$ly,
+                                   label = .data$series,
+                                   color = I(.data$label_col)),
+        inherit.aes = FALSE, size = 3.0, family = "sans",
+        show.legend = FALSE, fontface = "bold"
+      )
+    }
   }
 
   p <- p +
