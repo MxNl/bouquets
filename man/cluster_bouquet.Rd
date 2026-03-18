@@ -11,12 +11,13 @@ cluster_bouquet(
   value_col = 3,
   k = "auto",
   k_max = 8L,
-  method = c("pca_hclust", "pca_kmeans", "hclust", "kmeans", "pam"),
-  distance = c("euclidean", "correlation", "manhattan"),
+  method = c("coords_hclust", "coords_kmeans", "coords_pam", "heading_hclust",
+    "heading_kmeans", "heading_pam", "area_hclust", "area_pam"),
   resolution = 0.5,
-  pca_variance = 0.9,
   cluster_col = "cluster",
   normalise = FALSE,
+  ceiling_pct = 0.8,
+  launch_deg = 90,
   seed = NULL,
   verbose = FALSE
 )
@@ -41,50 +42,56 @@ composite silhouette score across \verb{k = 2, ..., k_max}.}
 \item{k_max}{A single positive integer. Upper bound considered when
 \code{k = "auto"}. Capped at \code{n_series - 1}. Defaults to \code{8L}.}
 
-\item{method}{The clustering algorithm. One of:
+\item{method}{The clustering algorithm and feature representation. One of:
 \describe{
-\item{\code{"pca_hclust"}}{(Default) PCA projection followed by agglomerative
-hierarchical clustering with Ward's D2. Deterministic; no extra
-packages required. The \code{distance} argument does not apply.}
-\item{\code{"pca_kmeans"}}{PCA projection followed by k-means. Set \code{seed}
-for reproducibility. The \code{distance} argument does not apply.}
-\item{\code{"hclust"}}{Ward's D2 hierarchical clustering directly on the
-direction sequences using the \code{distance} metric. Best for short series.}
-\item{\code{"kmeans"}}{k-means on the direction sequences. Always uses
-Euclidean distance internally. Set \code{seed} for reproducibility.}
-\item{\code{"pam"}}{Partitioning Around Medoids. More robust to outliers.
-Requires the \pkg{cluster} package.}
+\item{\code{"coords_hclust"}}{(Default) Clusters on the actual (x, y)
+path coordinates. Paths that look similar in the plot cluster together.
+Uses Ward's D2 hierarchical clustering. Deterministic.}
+\item{\code{"coords_kmeans"}}{As \code{"coords_hclust"} but k-means.
+Set \code{seed} for reproducibility.}
+\item{\code{"coords_pam"}}{As \code{"coords_hclust"} but Partitioning
+Around Medoids. More robust to outliers. Requires \pkg{cluster}.}
+\item{\code{"heading_hclust"}}{Clusters on the cumulative heading angle
+sequence. Captures turning patterns independently of absolute position;
+rotation-invariant. Uses Ward's D2.}
+\item{\code{"heading_kmeans"}}{As \code{"heading_hclust"} but k-means.}
+\item{\code{"heading_pam"}}{As \code{"heading_hclust"} but PAM. Requires
+\pkg{cluster}.}
+\item{\code{"area_hclust"}}{Pairwise area distance: the area of the
+polygon enclosed by two paths from the shared origin, computed via the
+cross-product sum \eqn{\frac{1}{2}|\sum_i (x^{(1)}_i y^{(2)}_i -
+      x^{(2)}_i y^{(1)}_i)|}. Paths spatially close and similarly shaped
+get small distances. Uses Ward's D2.}
+\item{\code{"area_pam"}}{As \code{"area_hclust"} but PAM. Requires
+\pkg{cluster}.}
 }}
-
-\item{distance}{Distance metric for \code{"hclust"} and \code{"pam"}. One of
-\code{"euclidean"} (default), \code{"correlation"} (\eqn{1 - r}), or \code{"manhattan"}.
-Not used by PCA methods or \code{"kmeans"}.}
 
 \item{resolution}{A non-negative number. Composite k-selection score:
 \eqn{\bar{s}(k) \times \min_c \bar{s}_c(k) \times k^{\text{resolution}}}.
 Higher values favour finer clusters. \code{0} = plain mean silhouette.
 Default \code{0.5}.}
 
-\item{pca_variance}{Cumulative variance retained during PCA. Only used by
-\code{"pca_hclust"} and \code{"pca_kmeans"}. Default \code{0.90}.}
-
 \item{cluster_col}{String. Name of the cluster column added to \code{data}.
 Default \code{"cluster"}.}
 
-\item{normalise}{Logical. Controls the feature representation used for
-clustering. Should match the value passed to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so
-that cluster assignments align visually with the rendered paths.
-\describe{
-\item{\code{FALSE} (default)}{Binary \eqn{\pm 1}/0 direction sequences.
-Clusters by directional pattern only.}
-\item{\code{TRUE}}{Same binary \eqn{\pm 1}/0 features. Per-series angle
-scaling in \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} does not change the direction
-sequence, so clustering is identical to \code{FALSE}.}
-}}
+\item{normalise}{Logical. Controls path building for clustering. Should
+match the value passed to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so that cluster
+assignments align visually with the rendered paths. \code{FALSE}
+(default) uses a single global \eqn{\theta}; \code{TRUE} normalises
+per series. See \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} for full details.}
+
+\item{ceiling_pct}{A single number in \verb{(0, 1]}. Passed to path building for
+path-geometry methods. Should match the value used in
+\code{\link[=make_plot_bouquet]{make_plot_bouquet()}}. Default \code{0.80}.}
+
+\item{launch_deg}{Initial heading in degrees for path building. Only used
+by path-geometry methods. Should match \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}. Default
+\code{90}.}
 
 \item{seed}{Integer or \code{NULL}. Random seed passed to \code{\link[base:Random]{base::set.seed()}}
 before k-means initialisation. Ensures reproducible results for
-\code{"pca_kmeans"} and \code{"kmeans"}. Default \code{NULL} = no seed (non-reproducible).}
+\code{"coords_kmeans"} and \code{"heading_kmeans"}.
+Default \code{NULL} = no seed (non-reproducible).}
 
 \item{verbose}{Logical. Print k selection table, chosen k, silhouette score,
 and cluster sizes. Default \code{FALSE}.}
@@ -98,8 +105,8 @@ attribute containing all clustering diagnostics; use
 }
 \description{
 Encodes each time series as a feature vector and clusters the series based
-on similarity of those sequences. The feature representation is controlled
-by \code{normalise} and should match the value used in \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so
+on similarity. The feature representation is controlled by \code{method} and
+\code{normalise}, and should match the value used in \code{\link[=make_plot_bouquet]{make_plot_bouquet()}} so
 that cluster assignments align visually with the rendered paths. The
 resulting \code{cluster} column can be passed directly to \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}
 via \code{stem_colors}, \code{flower_colors}, \code{facet_by}, or \code{cluster_hull}.
@@ -110,38 +117,34 @@ cluster column) \strong{and} a \code{cluster_bouquet} S3 object. Call
 quality, sizes, and member series.
 }
 \details{
-\subsection{Feature representation}{
+\subsection{Feature representations}{
 
-Each series of length \eqn{n} is represented as a vector of \eqn{n - 1}
-signed steps \eqn{d_i \in \{-1, 0, +1\}}.
+\strong{Path coordinates} (\code{"coords_*"}): each series is encoded as
+\eqn{2(n-1)} values \eqn{(x_1, \ldots, x_{n-1}, y_1, \ldots, y_{n-1})}.
+Directly reflects the visual plot -- paths close together cluster together.
+Most intuitive for visual interpretation. This is the default.
+
+\strong{Heading sequence} (\code{"heading_*"}): cumulative heading angle in
+degrees at each step. Captures the turning pattern independently of
+absolute position; rotation-invariant.
+
+\strong{Area distance} (\code{"area_*"}): pairwise distance is the area of the
+polygon enclosed by two paths (shoelace formula). Captures both shape
+difference and spatial separation in a single scalar with a clean
+geometric interpretation.
 }
 
 \subsection{Composite k-selection}{
 
-Plain mean silhouette consistently selects k = 2 because two large blobs
-score globally well even when finer structure exists. The composite score
-adds a worst-cluster penalty and a resolution exponent.
+Plain mean silhouette consistently selects k = 2. The composite score adds
+a worst-cluster penalty and a resolution exponent to favour finer structure.
 }
 
 \subsection{Pairing with \code{make_plot_bouquet()}}{
 
-Pass the same \code{normalise} value to both functions. When a \code{cluster_bouquet}
-object is piped into \code{\link[=make_plot_bouquet]{make_plot_bouquet()}}, the \code{normalise} setting is
-inherited automatically if \code{make_plot_bouquet()} is left at its default
-(\code{normalise = FALSE}). A warning is emitted if an explicit mismatch is
-detected.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{data |>
-  cluster_bouquet(
-    time_col = date, series_col = id, value_col = gwl,
-    normalise = TRUE
-  ) |>
-  make_plot_bouquet(
-    time_col = date, series_col = id, value_col = gwl,
-    stem_colors = cluster, flower_colors = cluster
-    # normalise = TRUE is inherited automatically
-  )
-}\if{html}{\out{</div>}}
+Pass the same \code{normalise}, \code{ceiling_pct}, and \code{launch_deg} to both
+functions. When a \code{cluster_bouquet} object is piped into
+\code{\link[=make_plot_bouquet]{make_plot_bouquet()}}, \code{normalise} is inherited automatically.
 }
 }
 \examples{
@@ -163,16 +166,21 @@ gw_long <- tibble::tibble(
   )
 )
 
-# Default: PCA + hclust, auto k, binary features
+# Default: path-coordinate clustering (coords_hclust), auto k
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
-
-# Inspect the result
 summary(clustered)
 
-# Plot silhouette scores across k to inspect the elbow
+# Path-coordinate clustering -- most visually intuitive
 \donttest{
-plot_cluster_quality(clustered)
+cluster_bouquet(gw_long,
+  time_col = week, series_col = station, value_col = level_m,
+  method = "coords_hclust")
+
+# Area-based clustering
+cluster_bouquet(gw_long,
+  time_col = week, series_col = station, value_col = level_m,
+  method = "area_hclust")
 }
 
 }

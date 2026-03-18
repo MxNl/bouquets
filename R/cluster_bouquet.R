@@ -2,8 +2,8 @@
 #'
 #' @description
 #' Encodes each time series as a feature vector and clusters the series based
-#' on similarity of those sequences. The feature representation is controlled
-#' by `normalise` and should match the value used in [make_plot_bouquet()] so
+#' on similarity. The feature representation is controlled by `method` and
+#' `normalise`, and should match the value used in [make_plot_bouquet()] so
 #' that cluster assignments align visually with the rendered paths. The
 #' resulting `cluster` column can be passed directly to [make_plot_bouquet()]
 #' via `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
@@ -26,44 +26,50 @@
 #'   composite silhouette score across `k = 2, ..., k_max`.
 #' @param k_max A single positive integer. Upper bound considered when
 #'   `k = "auto"`. Capped at `n_series - 1`. Defaults to `8L`.
-#' @param method The clustering algorithm. One of:
+#' @param method The clustering algorithm and feature representation. One of:
 #'   \describe{
-#'     \item{`"pca_hclust"`}{(Default) PCA projection followed by agglomerative
-#'       hierarchical clustering with Ward's D2. Deterministic; no extra
-#'       packages required. The `distance` argument does not apply.}
-#'     \item{`"pca_kmeans"`}{PCA projection followed by k-means. Set `seed`
-#'       for reproducibility. The `distance` argument does not apply.}
-#'     \item{`"hclust"`}{Ward's D2 hierarchical clustering directly on the
-#'       direction sequences using the `distance` metric. Best for short series.}
-#'     \item{`"kmeans"`}{k-means on the direction sequences. Always uses
-#'       Euclidean distance internally. Set `seed` for reproducibility.}
-#'     \item{`"pam"`}{Partitioning Around Medoids. More robust to outliers.
-#'       Requires the \pkg{cluster} package.}
+#'     \item{\code{"coords_hclust"}}{(Default) Clusters on the actual (x, y)
+#'       path coordinates. Paths that look similar in the plot cluster together.
+#'       Uses Ward's D2 hierarchical clustering. Deterministic.}
+#'     \item{\code{"coords_kmeans"}}{As \code{"coords_hclust"} but k-means.
+#'       Set `seed` for reproducibility.}
+#'     \item{\code{"coords_pam"}}{As \code{"coords_hclust"} but Partitioning
+#'       Around Medoids. More robust to outliers. Requires \pkg{cluster}.}
+#'     \item{\code{"heading_hclust"}}{Clusters on the cumulative heading angle
+#'       sequence. Captures turning patterns independently of absolute position;
+#'       rotation-invariant. Uses Ward's D2.}
+#'     \item{\code{"heading_kmeans"}}{As \code{"heading_hclust"} but k-means.}
+#'     \item{\code{"heading_pam"}}{As \code{"heading_hclust"} but PAM. Requires
+#'       \pkg{cluster}.}
+#'     \item{\code{"area_hclust"}}{Pairwise area distance: the area of the
+#'       polygon enclosed by two paths from the shared origin, computed via the
+#'       cross-product sum \eqn{\frac{1}{2}|\sum_i (x^{(1)}_i y^{(2)}_i -
+#'       x^{(2)}_i y^{(1)}_i)|}. Paths spatially close and similarly shaped
+#'       get small distances. Uses Ward's D2.}
+#'     \item{\code{"area_pam"}}{As \code{"area_hclust"} but PAM. Requires
+#'       \pkg{cluster}.}
 #'   }
-#' @param distance Distance metric for `"hclust"` and `"pam"`. One of
-#'   `"euclidean"` (default), `"correlation"` (\eqn{1 - r}), or `"manhattan"`.
-#'   Not used by PCA methods or `"kmeans"`.
 #' @param resolution A non-negative number. Composite k-selection score:
 #'   \eqn{\bar{s}(k) \times \min_c \bar{s}_c(k) \times k^{\text{resolution}}}.
 #'   Higher values favour finer clusters. `0` = plain mean silhouette.
 #'   Default `0.5`.
-#' @param pca_variance Cumulative variance retained during PCA. Only used by
-#'   `"pca_hclust"` and `"pca_kmeans"`. Default `0.90`.
 #' @param cluster_col String. Name of the cluster column added to `data`.
 #'   Default `"cluster"`.
-#' @param normalise Logical. Controls the feature representation used for
-#'   clustering. Should match the value passed to [make_plot_bouquet()] so
-#'   that cluster assignments align visually with the rendered paths.
-#'   \describe{
-#'     \item{\code{FALSE} (default)}{Binary \eqn{\pm 1}/0 direction sequences.
-#'       Clusters by directional pattern only.}
-#'     \item{\code{TRUE}}{Same binary \eqn{\pm 1}/0 features. Per-series angle
-#'       scaling in [make_plot_bouquet()] does not change the direction
-#'       sequence, so clustering is identical to \code{FALSE}.}
-#'   }
+#' @param normalise Logical. Controls path building for clustering. Should
+#'   match the value passed to [make_plot_bouquet()] so that cluster
+#'   assignments align visually with the rendered paths. \code{FALSE}
+#'   (default) uses a single global \eqn{\theta}; \code{TRUE} normalises
+#'   per series. See [make_plot_bouquet()] for full details.
+#' @param ceiling_pct A single number in `(0, 1]`. Passed to path building for
+#'   path-geometry methods. Should match the value used in
+#'   [make_plot_bouquet()]. Default `0.80`.
+#' @param launch_deg Initial heading in degrees for path building. Only used
+#'   by path-geometry methods. Should match [make_plot_bouquet()]. Default
+#'   `90`.
 #' @param seed Integer or `NULL`. Random seed passed to [base::set.seed()]
 #'   before k-means initialisation. Ensures reproducible results for
-#'   `"pca_kmeans"` and `"kmeans"`. Default `NULL` = no seed (non-reproducible).
+#'   `"coords_kmeans"` and `"heading_kmeans"`.
+#'   Default `NULL` = no seed (non-reproducible).
 #' @param verbose Logical. Print k selection table, chosen k, silhouette score,
 #'   and cluster sizes. Default `FALSE`.
 #'
@@ -74,33 +80,29 @@
 #'   [summary.cluster_bouquet()] to print them.
 #'
 #' @details
-#' ## Feature representation
-#' Each series of length \eqn{n} is represented as a vector of \eqn{n - 1}
-#' signed steps \eqn{d_i \in \{-1, 0, +1\}}.
+#' ## Feature representations
+#' **Path coordinates** (\code{"coords_*"}): each series is encoded as
+#' \eqn{2(n-1)} values \eqn{(x_1, \ldots, x_{n-1}, y_1, \ldots, y_{n-1})}.
+#' Directly reflects the visual plot -- paths close together cluster together.
+#' Most intuitive for visual interpretation. This is the default.
+#'
+#' **Heading sequence** (\code{"heading_*"}): cumulative heading angle in
+#' degrees at each step. Captures the turning pattern independently of
+#' absolute position; rotation-invariant.
+#'
+#' **Area distance** (\code{"area_*"}): pairwise distance is the area of the
+#' polygon enclosed by two paths (shoelace formula). Captures both shape
+#' difference and spatial separation in a single scalar with a clean
+#' geometric interpretation.
 #'
 #' ## Composite k-selection
-#' Plain mean silhouette consistently selects k = 2 because two large blobs
-#' score globally well even when finer structure exists. The composite score
-#' adds a worst-cluster penalty and a resolution exponent.
+#' Plain mean silhouette consistently selects k = 2. The composite score adds
+#' a worst-cluster penalty and a resolution exponent to favour finer structure.
 #'
 #' ## Pairing with `make_plot_bouquet()`
-#' Pass the same `normalise` value to both functions. When a `cluster_bouquet`
-#' object is piped into [make_plot_bouquet()], the `normalise` setting is
-#' inherited automatically if `make_plot_bouquet()` is left at its default
-#' (`normalise = FALSE`). A warning is emitted if an explicit mismatch is
-#' detected.
-#' ```r
-#' data |>
-#'   cluster_bouquet(
-#'     time_col = date, series_col = id, value_col = gwl,
-#'     normalise = TRUE
-#'   ) |>
-#'   make_plot_bouquet(
-#'     time_col = date, series_col = id, value_col = gwl,
-#'     stem_colors = cluster, flower_colors = cluster
-#'     # normalise = TRUE is inherited automatically
-#'   )
-#' ```
+#' Pass the same `normalise`, `ceiling_pct`, and `launch_deg` to both
+#' functions. When a `cluster_bouquet` object is piped into
+#' [make_plot_bouquet()], `normalise` is inherited automatically.
 #'
 #' @seealso [make_plot_bouquet()] for visualising the result.
 #'   [summary.cluster_bouquet()] for a structured quality report.
@@ -125,23 +127,28 @@
 #'   )
 #' )
 #'
-#' # Default: PCA + hclust, auto k, binary features
+#' # Default: path-coordinate clustering (coords_hclust), auto k
 #' clustered <- cluster_bouquet(gw_long,
 #'   time_col = week, series_col = station, value_col = level_m)
-#'
-#' # Inspect the result
 #' summary(clustered)
 #'
-#' # Plot silhouette scores across k to inspect the elbow
+#' # Path-coordinate clustering -- most visually intuitive
 #' \donttest{
-#' plot_cluster_quality(clustered)
+#' cluster_bouquet(gw_long,
+#'   time_col = week, series_col = station, value_col = level_m,
+#'   method = "coords_hclust")
+#'
+#' # Area-based clustering
+#' cluster_bouquet(gw_long,
+#'   time_col = week, series_col = station, value_col = level_m,
+#'   method = "area_hclust")
 #' }
 #'
 #' @export
 #' @importFrom dplyr all_of case_when filter group_by left_join mutate rename
 #'   row_number select ungroup .data
 #' @importFrom rlang ':='
-#' @importFrom stats as.dist cor cutree dist hclust kmeans prcomp setNames
+#' @importFrom stats as.dist cutree dist hclust kmeans setNames
 #' @importFrom tibble tibble
 cluster_bouquet <- function(
     data,
@@ -150,17 +157,22 @@ cluster_bouquet <- function(
     value_col    = 3,
     k            = "auto",
     k_max        = 8L,
-    method       = c("pca_hclust", "pca_kmeans", "hclust", "kmeans", "pam"),
-    distance     = c("euclidean", "correlation", "manhattan"),
+    method       = c("coords_hclust", "coords_kmeans", "coords_pam",
+                     "heading_hclust", "heading_kmeans", "heading_pam",
+                     "area_hclust", "area_pam"),
     resolution   = 0.5,
-    pca_variance = 0.90,
     cluster_col  = "cluster",
     normalise    = FALSE,
+    ceiling_pct  = 0.80,
+    launch_deg   = 90,
     seed         = NULL,
     verbose      = FALSE) {
 
-  method   <- match.arg(method)
-  distance <- match.arg(distance)
+  method <- match.arg(method)
+
+  # Convenience groups
+  area_methods <- c("area_hclust", "area_pam")
+  pam_methods  <- c("coords_pam", "heading_pam", "area_pam")
 
   # -- Validate inputs ----------------------------------------------------------
   if (!is.data.frame(data))
@@ -168,6 +180,13 @@ cluster_bouquet <- function(
 
   if (!is.logical(normalise) || length(normalise) != 1L)
     stop("`normalise` must be TRUE or FALSE.", call. = FALSE)
+
+  if (!is.numeric(ceiling_pct) || length(ceiling_pct) != 1L ||
+      ceiling_pct <= 0 || ceiling_pct > 1)
+    stop("`ceiling_pct` must be a single number in (0, 1].", call. = FALSE)
+
+  if (!is.numeric(launch_deg) || length(launch_deg) != 1L)
+    stop("`launch_deg` must be a single number.", call. = FALSE)
 
   if (!identical(k, "auto")) {
     if (!is.numeric(k) || length(k) != 1L || k < 2L || k != round(k))
@@ -182,10 +201,6 @@ cluster_bouquet <- function(
   if (!is.numeric(resolution) || length(resolution) != 1L || resolution < 0)
     stop("`resolution` must be a single non-negative number.", call. = FALSE)
 
-  if (!is.numeric(pca_variance) || length(pca_variance) != 1L ||
-      pca_variance <= 0 || pca_variance > 1)
-    stop("`pca_variance` must be a single number in (0, 1].", call. = FALSE)
-
   if (!is.character(cluster_col) || length(cluster_col) != 1L ||
       !nzchar(cluster_col))
     stop("`cluster_col` must be a non-empty string.", call. = FALSE)
@@ -196,15 +211,9 @@ cluster_bouquet <- function(
   if (!is.null(seed) && (!is.numeric(seed) || length(seed) != 1L))
     stop("`seed` must be a single integer or NULL.", call. = FALSE)
 
-  if (method == "pam" && !requireNamespace("cluster", quietly = TRUE))
-    stop('method = "pam" requires the cluster package. ',
+  if (method %in% pam_methods && !requireNamespace("cluster", quietly = TRUE))
+    stop(sprintf('method = "%s" requires the cluster package. ', method),
          'Install it with install.packages("cluster").', call. = FALSE)
-
-  # Warn when distance is set but will have no effect
-  distance_unused <- startsWith(method, "pca_") || method == "kmeans"
-  if (distance_unused && distance != "euclidean")
-    warning(sprintf('`distance = "%s"` has no effect for method = "%s".',
-                    distance, method), call. = FALSE)
 
   if (cluster_col %in% names(data))
     warning(sprintf('Column "%s" already exists and will be overwritten.',
@@ -218,69 +227,65 @@ cluster_bouquet <- function(
   if (!is.numeric(data[[value_col_name]]))
     stop(sprintf("Column '%s' must be numeric.", value_col_name), call. = FALSE)
 
-  # -- Build feature matrix -----------------------------------------------------
-  # normalise = FALSE / TRUE  ->  binary +1/-1/0 direction sequences
-  # normalise = "magnitude"   ->  raw signed deltas, globally range-normalised
-  dir_long <- data |>
-    dplyr::rename(
-      bq_t = dplyr::all_of(time_col_name),
-      bq_s = dplyr::all_of(series_col_name),
-      bq_v = dplyr::all_of(value_col_name)
-    ) |>
-    dplyr::group_by(.data$bq_s) |>
-    dplyr::mutate(
-      step  = dplyr::row_number(),
-      delta = .data$bq_v - dplyr::lag(.data$bq_v),
-      dir   = dplyr::case_when(
-        is.na(.data$delta) ~  0L,
-        .data$delta > 0    ~  1L,
-        .data$delta < 0    ~ -1L,
-        TRUE               ~  0L
-      )
-    ) |>
-    dplyr::filter(.data$step > 1L) |>
-    dplyr::select("bq_s", "step", "dir") |>
-    dplyr::ungroup()
-
-  series_names <- sort(unique(as.character(dir_long$bq_s)))
+  # Resolve series names early (needed for matrix row names in all branches)
+  series_names <- sort(unique(as.character(data[[series_col_name]])))
   n_series     <- length(series_names)
-  n_steps      <- max(dir_long$step)
-  n_features   <- n_steps - 1L
 
   if (n_series < 3L)
     stop("At least 3 series are required for meaningful clustering.", call. = FALSE)
 
-  feat_mat <- matrix(0, nrow = n_series, ncol = n_features,
-                     dimnames = list(series_names, NULL))
+  # -- Build feature / distance matrix -----------------------------------------
+  # All methods work from the actual path geometry, so we build paths first.
+  paths     <- .build_bouquet_paths(data, time_col_name, series_col_name,
+                                     value_col_name, ceiling_pct, launch_deg,
+                                     verbose = FALSE, normalise = normalise)
+  path_data <- paths$path_data
+  n_steps   <- max(path_data$step)
+  n_feat    <- n_steps - 1L   # exclude origin (step = 1, always (0,0))
 
-  # Binary +1/-1/0 direction sequences
-  feat_mat <- matrix(0L, nrow = n_series, ncol = n_features,
-                     dimnames = list(series_names, NULL))
-  for (sn in series_names) {
-    rows           <- dir_long[dir_long$bq_s == sn, ]
-    feat_mat[sn, ] <- rows$dir[order(rows$step)]
-  }
+  # Pre-sort each series' non-origin path rows once
+  path_list <- lapply(series_names, function(sn) {
+    rows <- path_data[path_data$series == sn & path_data$step > 1L, ]
+    rows[order(rows$step), ]
+  })
+  names(path_list) <- series_names
 
-  # -- Distance matrix ----------------------------------------------------------
-  dist_mat <- .bouquet_dist(feat_mat, distance)
+  if (method %in% area_methods) {
+    # Option C: pairwise area distance via shoelace cross-product sum
+    # dist(s1,s2) = 0.5 * |sum_i( x1_i*y2_i - x2_i*y1_i )|
+    dist_mat   <- .area_dist_bouquet(path_list, series_names)
+    feat_mat   <- NULL
+    feat_clust <- NULL
+    dist_clust <- dist_mat
 
-  # -- PCA compression ----------------------------------------------------------
-  feat_clust <- if (startsWith(method, "pca_")) {
-    .pca_compress(feat_mat, pca_variance, verbose)
+  } else if (startsWith(method, "coords_")) {
+    # Option A: flattened (x, y) coordinates -- 2*(n-1) features
+    feat_mat <- matrix(0, nrow = n_series, ncol = 2L * n_feat,
+                       dimnames = list(series_names, NULL))
+    for (sn in series_names) {
+      rows <- path_list[[sn]]
+      feat_mat[sn, ] <- c(rows$x, rows$y)
+    }
+    dist_mat   <- stats::dist(feat_mat, method = "euclidean")
+    feat_clust <- feat_mat
+    dist_clust <- dist_mat
+
   } else {
-    feat_mat
-  }
-
-  dist_clust <- if (startsWith(method, "pca_")) {
-    stats::dist(feat_clust, method = "euclidean")
-  } else {
-    dist_mat
+    # Option B: cumulative heading sequence -- (n-1) features
+    feat_mat <- matrix(0, nrow = n_series, ncol = n_feat,
+                       dimnames = list(series_names, NULL))
+    for (sn in series_names) {
+      rows <- path_list[[sn]]
+      feat_mat[sn, ] <- rows$heading_deg
+    }
+    dist_mat   <- stats::dist(feat_mat, method = "euclidean")
+    feat_clust <- feat_mat
+    dist_clust <- dist_mat
   }
 
   # -- Determine k --------------------------------------------------------------
   k_max_eff <- min(k_max, n_series - 1L)
-
-  score_tbl <- NULL   # will be filled when k = "auto"
+  score_tbl <- NULL
 
   if (identical(k, "auto")) {
     result <- .select_k_bouquet(
@@ -321,15 +326,12 @@ cluster_bouquet <- function(
     stringsAsFactors = FALSE
   )
 
-  sizes    <- table(labels_factor)
-  members  <- split(series_names, labels_factor)
+  sizes   <- table(labels_factor)
+  members <- split(series_names, labels_factor)
 
-  # -- Verbose output ------------------------------------------------------------
+  # -- Verbose output -----------------------------------------------------------
   if (verbose) {
-    cat(sprintf(
-      "\ncluster_bouquet  |  method = %s  |  distance = %s\n",
-      method, if (distance_unused) paste0(distance, " (unused)") else distance
-    ))
+    cat(sprintf("\ncluster_bouquet  |  method = %s\n", method))
     cat(sprintf("k = %d  |  mean silhouette = %.3f  |  resolution = %.2f\n",
                 k, mean_sil, resolution))
     cat("Cluster sizes:\n")
@@ -350,19 +352,18 @@ cluster_bouquet <- function(
 
   # -- Attach S3 class and metadata ---------------------------------------------
   attr(out, "bq_meta") <- list(
-    k            = k,
-    method       = method,
-    distance     = if (distance_unused) paste0(distance, " (unused)") else distance,
-    resolution   = resolution,
-    mean_sil     = mean_sil,
-    sizes        = sizes,
-    members      = members,
-    sil_tbl      = sil_tbl,
-    score_tbl    = score_tbl,
-    cluster_col  = cluster_col,
-    normalise    = normalise,
-    seed         = seed,
-    n_series     = n_series
+    k           = k,
+    method      = method,
+    resolution  = resolution,
+    mean_sil    = mean_sil,
+    sizes       = sizes,
+    members     = members,
+    sil_tbl     = sil_tbl,
+    score_tbl   = score_tbl,
+    cluster_col = cluster_col,
+    normalise   = normalise,
+    seed        = seed,
+    n_series    = n_series
   )
   class(out) <- c("cluster_bouquet", class(out))
   out
@@ -403,7 +404,6 @@ summary.cluster_bouquet <- function(object, ...) {
 
   cat("-- cluster_bouquet summary ----------------------------------------------\n")
   cat(sprintf("  Method    : %s\n", m$method))
-  cat(sprintf("  Distance  : %s\n", m$distance))
   cat(sprintf("  Normalise : %s\n", if (isTRUE(m$normalise)) "TRUE" else "FALSE"))
   cat(sprintf("  Seed      : %s\n", if (is.null(m$seed)) "none" else m$seed))
   cat(sprintf("  Series    : %d   k = %d   Resolution = %.2f\n",
@@ -517,8 +517,8 @@ plot_cluster_quality <- function(x, dark_mode = FALSE) {
     ggplot2::labs(
       title    = "Cluster quality across k",
       subtitle = sprintf(
-        "method = %s | distance = %s | resolution = %.2f | selected k = %d",
-        m$method, m$distance, m$resolution, m$k
+        "method = %s | resolution = %.2f | selected k = %d",
+        m$method, m$resolution, m$k
       ),
       x = "Number of clusters (k)",
       y = "Composite silhouette score"
@@ -545,38 +545,36 @@ plot_cluster_quality <- function(x, dark_mode = FALSE) {
 # -- Unexported helpers ---------------------------------------------------------
 
 #' @noRd
-.bouquet_dist <- function(feat_mat, distance) {
-  if (distance == "correlation") {
-    r   <- stats::cor(t(feat_mat))
-    r[] <- pmax(-1, pmin(1, r))
-    stats::as.dist(1 - r)
-  } else {
-    stats::dist(feat_mat,
-                method = if (distance == "manhattan") "manhattan" else "euclidean")
-  }
-}
-
-#' @noRd
-.pca_compress <- function(feat_mat, pca_variance, verbose) {
-  pca     <- stats::prcomp(feat_mat, center = TRUE, scale. = FALSE)
-  cum_var <- cumsum(pca$sdev^2) / sum(pca$sdev^2)
-  n_comp  <- max(2L, which(cum_var >= pca_variance)[1L])
-  if (verbose)
-    cat(sprintf("PCA: retaining %d / %d components (%.0f%% variance explained)\n",
-                n_comp, ncol(feat_mat), cum_var[n_comp] * 100))
-  pca$x[, seq_len(n_comp), drop = FALSE]
-}
-
-#' @noRd
 .run_clustering_bouquet <- function(feat_clust, dist_clust, k, method) {
   switch(method,
-    pca_hclust = ,
-    hclust     = stats::cutree(stats::hclust(dist_clust, method = "ward.D2"), k = k),
-    pca_kmeans = ,
-    kmeans     = stats::kmeans(feat_clust, centers = k,
-                               nstart = 25L, iter.max = 100L)$cluster,
-    pam        = cluster::pam(dist_clust, k = k, diss = TRUE)$clustering
+    coords_hclust  = ,
+    heading_hclust = ,
+    area_hclust    = stats::cutree(stats::hclust(dist_clust, method = "ward.D2"), k = k),
+    coords_kmeans  = ,
+    heading_kmeans = stats::kmeans(feat_clust, centers = k,
+                                   nstart = 25L, iter.max = 100L)$cluster,
+    coords_pam     = ,
+    heading_pam    = ,
+    area_pam       = cluster::pam(dist_clust, k = k, diss = TRUE)$clustering
   )
+}
+
+#' Pairwise area distance between bouquet paths (shoelace cross-product sum)
+#' @noRd
+.area_dist_bouquet <- function(path_list, series_names) {
+  n    <- length(series_names)
+  dmat <- matrix(0, nrow = n, ncol = n,
+                 dimnames = list(series_names, series_names))
+  for (i in seq_len(n - 1L)) {
+    p1 <- path_list[[series_names[i]]]
+    for (j in seq(i + 1L, n)) {
+      p2        <- path_list[[series_names[j]]]
+      area      <- 0.5 * abs(sum(p1$x * p2$y - p2$x * p1$y))
+      dmat[i, j] <- area
+      dmat[j, i] <- area
+    }
+  }
+  stats::as.dist(dmat)
 }
 
 #' @noRd

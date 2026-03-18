@@ -81,9 +81,9 @@ data_gems <-
   select(id, date, gwl = GWL) |> 
   tidyr::pivot_wider(names_from = "id", values_from = "gwl")
 
-data_gems <- 
-  data_gems |> 
-  filter(year(date) >= 2020)
+# data_gems <- 
+#   data_gems |> 
+#   filter(year(date) >= 2020)
 
 data_gems <- 
   data_gems |> 
@@ -253,6 +253,35 @@ data_gems |>
     show_labels = TRUE,
     label_color = "grey"
   )
+
+set.seed(42)
+data_gems |> 
+  sample_groups(id, 20) |> 
+  arrange() |> 
+  group_by(id, year(date), month(date)) |> 
+  slice_head() |> 
+  ungroup() |> 
+  cluster_bouquet(
+  # seed = NULL,
+  normalise = FALSE,
+  method = "area_hclust"
+) |> 
+  make_plot_bouquet(
+    time_col = date,
+    series_col = id,
+    value_col = gwl,
+    title = "Groundwater levels in Germany",
+    ceiling_pct = 0.7,
+    flower_color = cluster,
+    stem_colors = cluster,
+    marker_every = "year",
+    show_labels = TRUE,
+    label_color = "grey",
+    lon_col = easting_epsg_3035,
+    lat_col = northing_epsg_3035,
+    cluster_hull = cluster
+  )
+
 
 
 data_gems |> 
