@@ -11,6 +11,7 @@ vignette: >
 library(bouquets)
 library(dplyr)
 library(tibble)
+knitr::opts_chunk$set(fig.width = 9, fig.height = 7)
 ```
 
 <img src="../man/figures/logo.svg" align="right" height="139" alt="bouquets hex sticker" />
@@ -95,7 +96,8 @@ make_plot_bouquet(
 ## Highlighting individual series
 
 Use `highlight` to bring specific series to the foreground; all others are
-dimmed to a pale grey.
+dimmed to a pale grey. Highlighted series are drawn on top so they are never
+obscured by dimmed paths.
 
 ```{r highlight}
 make_plot_bouquet(
@@ -105,6 +107,41 @@ make_plot_bouquet(
   value_col  = level_m,
   highlight  = c("S1", "S2"),
   title      = "Stations S1 and S2 highlighted"
+)
+```
+
+## Series labels
+
+`show_labels = TRUE` prints each series name next to its flower, offset along
+the final heading direction. This is especially useful when the legend is
+hidden (`hide_legend_after`) or for quick identification without hovering.
+By default labels inherit the flower colour; pass `label_color` for a uniform
+colour:
+
+```{r labels}
+make_plot_bouquet(
+  gw_long,
+  time_col          = week,
+  series_col        = station,
+  value_col         = level_m,
+  show_labels       = TRUE,
+  hide_legend_after = 1L,     # suppress legend so labels carry the id
+  title             = "Series identified by direct labels"
+)
+```
+
+```{r labels-color}
+make_plot_bouquet(
+  gw_long,
+  time_col          = week,
+  series_col        = station,
+  value_col         = level_m,
+  stem_colors       = region,
+  flower_colors     = region,
+  show_labels       = TRUE,
+  label_color       = "#1a1a2e",
+  hide_legend_after = 1L,
+  title             = "Labels in a single dark colour"
 )
 ```
 
@@ -299,8 +336,7 @@ gw_long |>
   cluster_bouquet(
     time_col   = week,
     series_col = station,
-    value_col  = level_m,
-    seed       = 42L
+    value_col  = level_m
   ) |>
   make_plot_bouquet(
     time_col      = week,

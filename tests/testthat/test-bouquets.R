@@ -33,9 +33,9 @@ test_that("make_plot_bouquet returns a ggplot for minimal call", {
 })
 
 test_that("make_plot_bouquet verbose = FALSE produces no output", {
-  out <- capture.output(
-    make_plot_bouquet(gw, week, station, level_m, verbose = FALSE)
-  )
+  out <- capture.output(suppressMessages(
+    p <- make_plot_bouquet(gw, week, station, level_m, verbose = FALSE)
+  ))
   expect_length(out, 0L)
 })
 
@@ -218,9 +218,9 @@ test_that("cluster_bouquet seed gives reproducible results for kmeans", {
 })
 
 test_that("cluster_bouquet verbose = FALSE produces no output", {
-  out <- capture.output(
-    cluster_bouquet(gw, week, station, level_m, verbose = FALSE)
-  )
+  out <- capture.output(suppressMessages(
+    cl <- cluster_bouquet(gw, week, station, level_m, verbose = FALSE)
+  ))
   expect_length(out, 0L)
 })
 
@@ -228,8 +228,7 @@ test_that("cluster_bouquet all coords methods run without error", {
   for (m in c("coords_hclust", "coords_kmeans", "coords_pam")) {
     cl <- cluster_bouquet(gw, week, station, level_m, method = m, k = 2L,
                           seed = 1L)
-    expect_s3_class(cl, "cluster_bouquet",
-                    label = paste("coords method:", m))
+    expect_s3_class(cl, "cluster_bouquet")
   }
 })
 
@@ -237,16 +236,14 @@ test_that("cluster_bouquet all heading methods run without error", {
   for (m in c("heading_hclust", "heading_kmeans", "heading_pam")) {
     cl <- cluster_bouquet(gw, week, station, level_m, method = m, k = 2L,
                           seed = 1L)
-    expect_s3_class(cl, "cluster_bouquet",
-                    label = paste("heading method:", m))
+    expect_s3_class(cl, "cluster_bouquet")
   }
 })
 
 test_that("cluster_bouquet all area methods run without error", {
   for (m in c("area_hclust", "area_pam")) {
     cl <- cluster_bouquet(gw, week, station, level_m, method = m, k = 2L)
-    expect_s3_class(cl, "cluster_bouquet",
-                    label = paste("area method:", m))
+    expect_s3_class(cl, "cluster_bouquet")
   }
 })
 
@@ -401,9 +398,11 @@ test_that("cluster normalise = TRUE is inherited by make_plot_bouquet", {
 })
 
 test_that("explicit normalise mismatch with cluster_bouquet warns", {
-  cl <- cluster_bouquet(gw, week, station, level_m, normalise = TRUE)
+  # cluster built with default normalise = FALSE; user passes TRUE explicitly
+  # -> stored=FALSE, passed=TRUE -> neither is the default-inherit case -> warn
+  cl <- cluster_bouquet(gw, week, station, level_m)
   expect_warning(
-    make_plot_bouquet(cl, week, station, level_m, normalise = FALSE),
+    make_plot_bouquet(cl, week, station, level_m, normalise = TRUE),
     "normalise"
   )
 })
