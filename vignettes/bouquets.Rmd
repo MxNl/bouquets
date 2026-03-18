@@ -141,27 +141,6 @@ make_plot_bouquet(
 )
 ```
 
-## Magnitude mode
-
-`normalise = "magnitude"` replaces the binary ±1 step with the actual signed
-delta value. The global calibration ensures the series with the widest value
-range sweeps `ceiling_pct × 360°`, so large jumps bend the path more than
-small ones. This encodes **both direction and amplitude** in the path shape,
-making it possible to compare volatility across series: a volatile series
-curves more than a flat one, and two series with similar variance but different
-directional patterns produce visually distinct shapes.
-
-```{r magnitude}
-make_plot_bouquet(
-  gw_long,
-  time_col   = week,
-  series_col = station,
-  value_col  = level_m,
-  normalise  = "magnitude",
-  title      = "Magnitude mode -- turn angle proportional to delta"
-)
-```
-
 ## Clustering
 
 `cluster_bouquet()` adds a `cluster` column to the data. It returns a

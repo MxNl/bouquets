@@ -220,8 +220,7 @@ data_gems |>
     stem_colors = cluster,
     coord_crs = 3035,
     cluster_hull = cluster,
-    hull_coverage = .5,
-    normalise = "magnitude"
+    hull_coverage = .5
   )
 
 sample_groups <- function(df, col, n) {
