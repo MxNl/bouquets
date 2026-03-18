@@ -1,9 +1,11 @@
 # Cluster Time Series by Directional Dynamics
 
-Encodes each time series as a sequence of signed directional steps
-(\\+1\\ increase, \\-1\\ decrease, \\0\\ no change) and clusters the
-series based on the similarity of those sequences. The resulting
-`cluster` column can be passed directly to
+Encodes each time series as a feature vector and clusters the series
+based on similarity of those sequences. The feature representation is
+controlled by `normalise` and should match the value used in
+[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
+so that cluster assignments align visually with the rendered paths. The
+resulting `cluster` column can be passed directly to
 [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 via `stem_colors`, `flower_colors`, `facet_by`, or `cluster_hull`.
 
@@ -28,7 +30,8 @@ cluster_bouquet(
   resolution = 0.5,
   pca_variance = 0.9,
   cluster_col = "cluster",
-  seed = 42L,
+  normalise = FALSE,
+  seed = NULL,
   verbose = FALSE
 )
 ```
@@ -120,13 +123,32 @@ cluster_bouquet(
   String. Name of the cluster column added to `data`. Default
   `"cluster"`.
 
+- normalise:
+
+  Logical. Controls the feature representation used for clustering.
+  Should match the value passed to
+  [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
+  so that cluster assignments align visually with the rendered paths.
+
+  `FALSE` (default)
+
+  :   Binary \\\pm 1\\/0 direction sequences. Clusters by directional
+      pattern only.
+
+  `TRUE`
+
+  :   Same binary \\\pm 1\\/0 features. Per-series angle scaling in
+      [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
+      does not change the direction sequence, so clustering is identical
+      to `FALSE`.
+
 - seed:
 
   Integer or `NULL`. Random seed passed to
   [`base::set.seed()`](https://rdrr.io/r/base/Random.html) before
   k-means initialisation. Ensures reproducible results for
-  `"pca_kmeans"` and `"kmeans"`. `NULL` = no seed (non-reproducible).
-  Default `42L`.
+  `"pca_kmeans"` and `"kmeans"`. Default `NULL` = no seed
+  (non-reproducible).
 
 - verbose:
 
@@ -157,12 +179,23 @@ score adds a worst-cluster penalty and a resolution exponent.
 
 ### Pairing with [`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
 
+Pass the same `normalise` value to both functions. When a
+`cluster_bouquet` object is piped into
+[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md),
+the `normalise` setting is inherited automatically if
+[`make_plot_bouquet()`](https://mxnl.github.io/bouquets/reference/make_plot_bouquet.md)
+is left at its default (`normalise = FALSE`). A warning is emitted if an
+explicit mismatch is detected.
+
     data |>
-      cluster_bouquet(time_col = date, series_col = id, value_col = gwl) |>
+      cluster_bouquet(
+        time_col = date, series_col = id, value_col = gwl,
+        normalise = TRUE
+      ) |>
       make_plot_bouquet(
-        time_col      = date,   series_col    = id,   value_col = gwl,
-        stem_colors   = cluster, flower_colors = cluster,
-        lon_col = lon, lat_col = lat, cluster_hull = cluster
+        time_col = date, series_col = id, value_col = gwl,
+        stem_colors = cluster, flower_colors = cluster
+        # normalise = TRUE is inherited automatically
       )
 
 ## See also
@@ -195,7 +228,7 @@ gw_long <- tibble::tibble(
   )
 )
 
-# Default: PCA + hclust, auto k
+# Default: PCA + hclust, auto k, binary features
 clustered <- cluster_bouquet(gw_long,
   time_col = week, series_col = station, value_col = level_m)
 

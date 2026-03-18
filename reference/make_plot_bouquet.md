@@ -22,6 +22,8 @@ make_plot_bouquet(
   ceiling_pct = 0.8,
   launch_deg = 90,
   marker_every = NULL,
+  show_labels = FALSE,
+  label_color = NULL,
   show_rings = FALSE,
   dark_mode = FALSE,
   title = NULL,
@@ -109,8 +111,26 @@ make_plot_bouquet(
 
 - marker_every:
 
-  Positive integer. A dot is plotted at every `marker_every`-th step.
+  Controls step-markers. Either a positive integer (a dot every n-th
+  step) or one of the time-frequency keywords `"year"`, `"quarter"`,
+  `"month"`, `"week"`, or `"day"`. For keywords, the equivalent integer
+  step count is estimated from the median interval of `time_col`.
+  Keywords require `time_col` to be a `Date` or `POSIXct` vector;
+  non-date columns fall back to `marker_every = 1` with a warning.
   `NULL` (default) = no markers.
+
+- show_labels:
+
+  Logical. When `TRUE`, the series name is printed next to each flower
+  symbol, offset in the direction of the final heading. Useful when the
+  legend is suppressed (e.g. when `n_series >= hide_legend_after`) or
+  for single-panel identification. Default `FALSE`.
+
+- label_color:
+
+  Single colour string (e.g. `"#333333"`) applied to all series labels
+  when `show_labels = TRUE`. `NULL` (default) colours each label to
+  match its flower.
 
 - show_rings:
 
@@ -205,8 +225,7 @@ make_plot_bouquet(
 
 - normalise:
 
-  Controls how the turning angle \\\theta\\ is derived. Three options
-  are accepted:
+  Logical. Controls how the turning angle \\\theta\\ is derived.
 
   `FALSE` (default)
 
@@ -218,20 +237,9 @@ make_plot_bouquet(
 
   `TRUE`
 
-  :   Each series is assigned its own per-series \\\theta\\ so that
-      every path uses the full angular range independently of
-      volatility. Useful for shape comparison when series have very
-      different variances; magnitude differences are suppressed.
-
-  `"magnitude"`
-
-  :   Turn angle at each step is proportional to the raw signed delta
-      value rather than its sign alone. Calibrated globally so the
-      series with the widest value range sweeps
-      `ceiling_pct \(\times\) 360\(^\circ\)`. This preserves amplitude
-      information and enables magnitude comparison across series: a
-      large jump bends the path more than a small one, and paths for
-      volatile series curve more than flat ones.
+  :   Each series gets its own per-series \\\theta\\ so every path uses
+      the full angular range independently of volatility. Useful for
+      shape comparison when series have very different variances.
 
 - verbose:
 
