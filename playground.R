@@ -264,7 +264,7 @@ data_gems |>
   cluster_bouquet(
   # seed = NULL,
   normalise = FALSE,
-  method = "area_hclust"
+  method = "coords_hclust"
 ) |> 
   make_plot_bouquet(
     time_col = date,
@@ -274,7 +274,8 @@ data_gems |>
     ceiling_pct = 0.7,
     flower_color = cluster,
     stem_colors = cluster,
-    marker_every = "year",
+    # stem_colors = "greens",
+    # marker_every = "year",
     show_labels = TRUE,
     label_color = "grey",
     lon_col = easting_epsg_3035,
