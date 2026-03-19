@@ -16,7 +16,7 @@ The technique is structurally related to DNA walk visualisations (Gates
 ``` r
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("YOUR_GITHUB_USERNAME/bouquets")
+remotes::install_github("MxNl/bouquets")
 ```
 
 Optional dependencies that unlock extra features:
@@ -253,7 +253,7 @@ If you use bouquets in a publication, please cite it as:
 
 ``` R
 Last, F. (2025). bouquets: Angular accumulation plots for time series.
-R package version 0.1.0. https://github.com/YOUR_GITHUB_USERNAME/bouquets
+R package version 0.1.0. https://github.com/MxNl/bouquets
 ```
 
 ------------------------------------------------------------------------
