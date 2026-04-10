@@ -627,6 +627,16 @@ make_plot_bouquet <- function(
   if (!is.null(label_color) &&
       (!is.character(label_color) || length(label_color) != 1L))
     stop("`label_color` must be a single colour string or NULL.", call. = FALSE)
+
+  # -- Resolve flower renderer --------------------------------------------------
+  # Try to use the bundled SVG flower (inst/extdata/flower.svg) via ggsvg.
+  # Falls back silently to the Unicode flower character if ggsvg is not
+  # installed or the file is not found (e.g. during development before install).
+  svg_path   <- system.file("extdata", "flower.svg", package = "bouquets")
+  use_svg    <- nzchar(svg_path) && file.exists(svg_path) &&
+                requireNamespace("ggsvg", quietly = TRUE)
+  svg_string <- if (use_svg) paste(readLines(svg_path, warn = FALSE),
+                                   collapse = "\n") else NULL
   if (!is.logical(show_rings) || length(show_rings) != 1L)
     stop("`show_rings` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(dark_mode) || length(dark_mode) != 1L)
@@ -901,32 +911,41 @@ make_plot_bouquet <- function(
     dplyr::ungroup() |>
     dplyr::mutate(flower_col = unname(flower_colors_resolved[.data$series]))
 
+  # Helper: one flower layer for a given data slice
+  .flower_layer <- function(df) {
+    if (use_svg) {
+      ggsvg::geom_point_svg(
+        data        = df,
+        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
+                                   css("path#blossom", fill = I(.data$flower_col))),
+        svg         = svg_string,
+        inherit.aes = FALSE,
+        size        = 5.5,
+        show.legend = FALSE
+      )
+    } else {
+      ggplot2::geom_text(
+        data        = df,
+        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
+                                   label = "\u273f",
+                                   colour = I(.data$flower_col)),
+        inherit.aes = FALSE,
+        size        = 5.5,
+        family      = "sans",
+        show.legend = FALSE
+      )
+    }
+  }
+
   # Flowers: dimmed first, highlighted on top
   if (!is.null(highlight)) {
     end_dim <- dplyr::filter(end_data,
                              !as.character(.data$series) %in% as.character(highlight))
     end_hl  <- dplyr::filter(end_data,
                               as.character(.data$series) %in% as.character(highlight))
-    p <- p +
-      ggplot2::geom_text(
-        data        = end_dim,
-        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                                   label = "\u273f", color = I(.data$flower_col)),
-        inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
-      ) +
-      ggplot2::geom_text(
-        data        = end_hl,
-        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                                   label = "\u273f", color = I(.data$flower_col)),
-        inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
-      )
+    p <- p + .flower_layer(end_dim) + .flower_layer(end_hl)
   } else {
-    p <- p + ggplot2::geom_text(
-      data        = end_data,
-      mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                                 label = "\u273f", color = I(.data$flower_col)),
-      inherit.aes = FALSE, size = 5.5, family = "sans", show.legend = FALSE
-    )
+    p <- p + .flower_layer(end_data)
   }
 
   if (show_labels) {

@@ -103,6 +103,48 @@ data_gems |>
     stem_colors = "greens"
   )
 
+svg_text <- readLines("inst/extdata/flower.svg")
+
+ggplot(data.frame(x=1, y=1, g="A"), aes(x,y)) +
+  ggsvg::geom_point_svg(aes(colour=g), size=10, svg=svg_text) +
+  ggplot2::scale_colour_manual(values = "green")
+
+snowman_txt <- '
+  <svg viewBox="0 0 100 100 ">
+    <circle id="top" cx="50" cy="20" r="20" fill="brown" stroke="black" />
+    <circle id="bot" cx="50" cy="70" r="30" fill="brown" stroke="black" />
+  </svg>
+  '
+
+svg_data
+
+svg_data <- paste(readLines("inst/extdata/flower.svg"), collapse = "\n")
+
+ggplot(data.frame(x=1, y=1, g="A")) +
+  ggsvg::geom_point_svg(aes(x, y, css("path#blossom", fill = g)), size=10, svg=svg_data) +
+  
+
+test_df <- data.frame(
+  x = runif(10), 
+  y = runif(10), 
+  count = sample(3:5, 10, T),
+  type  = sample(c('a', 'b', 'c'), 10, T))
+
+ggplot(test_df) + 
+  geom_point_svg(aes(x, y), svg = svg_txt) + 
+  theme_bw()
+
+ggplot(test_df) + 
+  geom_point_svg(
+    aes(x, y, css("circle#top", fill = type)),
+    # css("circle#bot", stroke = 'brown'),
+    # css("circle", 'stroke-width'=10),
+    svg = svg_data
+  ) +
+  theme_bw()
+  scale_svg_fill_brewer(aesthetics = css("circle#top", fill = type), palette = 'Dark2')
+
+
 data_gems |> 
   make_plot_bouquet(
     time_col = date,
@@ -140,7 +182,7 @@ data_gems |>
 
 data_gems |> 
   cluster_bouquet(
-    distance = "correlation", 
+    # distance = "correlation", 
     method = "hclust",
     k = 25
   ) |> 
@@ -235,18 +277,18 @@ sample_groups <- function(df, col, n) {
 
 set.seed(42)
 data_gems |> 
-  sample_groups(id, 5) |> 
+  sample_groups(id, 20) |> 
   bouquets::cluster_bouquet(
   # seed = NULL,
   normalise = FALSE,
-  method = "pca_hclust"
+  method = "coords_hclust"
 ) |> 
   make_plot_bouquet(
     time_col = date,
     series_col = id,
     value_col = gwl,
     title = "Groundwater levels in Germany",
-    ceiling_pct = 0.7,
+    ceiling_pct = 0.9,
     flower_color = cluster,
     stem_colors = cluster,
     marker_every = "year",
