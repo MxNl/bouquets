@@ -1,5 +1,38 @@
 # -- Unexported helpers --------------------------------------------------------
 
+.flower_shape <- data.frame(
+  x = c(
+    16.7, 15.8, 14.8, 13.7, 6.0, 7.4, 11.4, 5.9, 0.0, 0.0,
+    0.0, 6.8, 12.7, 9.3, 7.6, 13.9, 21.3, 25.1, 25.4, 28.4,
+    32.6, 37.2, 42.6, 37.0, 30.8, 36.6, 42.1, 38.1, 33.5,
+    25.9, 22.2, 22.4, 21.4, 16.7
+  ),
+  y = c(
+    0.0, -0.03, 0.12, 0.48, 2.98, 10.63, 15.68, 13.85, 13.56, 20.72,
+    28.33, 29.68, 27.96, 32.26, 37.19, 39.66, 42.56, 36.08, 29.76,
+    34.61, 38.44, 33.11, 26.82, 20.89, 18.78, 17.36, 14.40, 8.24,
+    1.09, 5.16, 10.76, 5.60, 0.19, 0.0
+  )
+)
+
+.flower_shape$x <- .flower_shape$x - mean(.flower_shape$x)
+.flower_shape$y <- .flower_shape$y - mean(.flower_shape$y)
+
+
+.make_flowers <- function(df, scale = 0.05) {
+  do.call(
+    rbind,
+    lapply(seq_len(nrow(df)), function(i) {
+      data.frame(
+        x = .flower_shape$x * scale + df$x[i],
+        y = .flower_shape$y * scale + df$y[i],
+        flower_col = df$flower_col[i],
+        id = i
+      )
+    })
+  )
+}
+
 #' Format a time vector's typical interval as a human-readable string
 #' @noRd
 .format_interval <- function(tv) {
@@ -914,15 +947,19 @@ make_plot_bouquet <- function(
   # Helper: one flower layer for a given data slice
   .flower_layer <- function(df) {
     if (use_svg) {
-      ggsvg::geom_point_svg(
-        data        = df,
-        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                                   css("path#blossom", fill = I(.data$flower_col))),
-        svg         = svg_string,
-        inherit.aes = FALSE,
-        size        = 5.5,
-        show.legend = FALSE
-      )
+      flowers_poly <- .make_flowers(df, scale = 0.05)
+
+  ggplot2::geom_polygon(
+    data = flowers_poly,
+    ggplot2::aes(
+      x = x,
+      y = y,
+      group = interaction(id),
+      fill = I(flower_col)
+    ),
+    inherit.aes = FALSE,
+    colour = NA
+  )
     } else {
       ggplot2::geom_text(
         data        = df,
