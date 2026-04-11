@@ -65,7 +65,7 @@ data_gems_static <- read_csv("../../git_daten/bouquet/GEMS-GER_data/static/stati
 
 set.seed(42)
 wells_to_read <- data_gems_static |> 
-  slice_sample(n = 10, by = hyraum_hd) |> 
+  slice_sample(n = 5, by = hyraum_hd) |> 
   pull(mw_id) |> 
   str_c(... = _, ".csv")
 
@@ -102,48 +102,6 @@ data_gems |>
     flower_color = "blossom",
     stem_colors = "greens"
   )
-
-svg_text <- readLines("inst/extdata/flower.svg")
-
-ggplot(data.frame(x=1, y=1, g="A"), aes(x,y)) +
-  ggsvg::geom_point_svg(aes(colour=g), size=10, svg=svg_text) +
-  ggplot2::scale_colour_manual(values = "green")
-
-snowman_txt <- '
-  <svg viewBox="0 0 100 100 ">
-    <circle id="top" cx="50" cy="20" r="20" fill="brown" stroke="black" />
-    <circle id="bot" cx="50" cy="70" r="30" fill="brown" stroke="black" />
-  </svg>
-  '
-
-svg_data
-
-svg_data <- paste(readLines("inst/extdata/flower.svg"), collapse = "\n")
-
-ggplot(data.frame(x=1, y=1, g="A")) +
-  ggsvg::geom_point_svg(aes(x, y, css("path#blossom", fill = g)), size=10, svg=svg_data) +
-  
-
-test_df <- data.frame(
-  x = runif(10), 
-  y = runif(10), 
-  count = sample(3:5, 10, T),
-  type  = sample(c('a', 'b', 'c'), 10, T))
-
-ggplot(test_df) + 
-  geom_point_svg(aes(x, y), svg = svg_txt) + 
-  theme_bw()
-
-ggplot(test_df) + 
-  geom_point_svg(
-    aes(x, y, css("circle#top", fill = type)),
-    # css("circle#bot", stroke = 'brown'),
-    # css("circle", 'stroke-width'=10),
-    svg = svg_data
-  ) +
-  theme_bw()
-  scale_svg_fill_brewer(aesthetics = css("circle#top", fill = type), palette = 'Dark2')
-
 
 data_gems |> 
   make_plot_bouquet(

@@ -29,14 +29,12 @@ Imports:
     tibble
 Suggests:
     ggblend,
-    ggsvg,
     knitr,
     mapdata,
     maps,
     patchwork,
     plotly,
     rmarkdown,
-    rsvg,
     sf,
     testthat (>= 3.0.0),
     withr

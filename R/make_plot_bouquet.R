@@ -1,33 +1,104 @@
 # -- Unexported helpers --------------------------------------------------------
 
-.flower_shape <- data.frame(
-  x = c(
-    16.7, 15.8, 14.8, 13.7, 6.0, 7.4, 11.4, 5.9, 0.0, 0.0,
-    0.0, 6.8, 12.7, 9.3, 7.6, 13.9, 21.3, 25.1, 25.4, 28.4,
-    32.6, 37.2, 42.6, 37.0, 30.8, 36.6, 42.1, 38.1, 33.5,
-    25.9, 22.2, 22.4, 21.4, 16.7
-  ),
-  y = c(
-    0.0, -0.03, 0.12, 0.48, 2.98, 10.63, 15.68, 13.85, 13.56, 20.72,
-    28.33, 29.68, 27.96, 32.26, 37.19, 39.66, 42.56, 36.08, 29.76,
-    34.61, 38.44, 33.11, 26.82, 20.89, 18.78, 17.36, 14.40, 8.24,
-    1.09, 5.16, 10.76, 5.60, 0.19, 0.0
-  )
-)
+# Smooth polygon approximation of the flower shape from inst/extdata/flower.svg.
+# The 34 SVG control points are first centred and then smoothed with a periodic
+# cubic spline (parameterised by cumulative chord length) evaluated at 300
+# equally-spaced points, giving a visually smooth closed outline with no
+# aliasing artefacts. Coordinates are normalised so the longest axis = 1 unit,
+# making the `scale` argument in .make_flowers() a diameter in data units.
+.flower_shape <- local({
+  # SVG-style flower blossom defined as Bezier control points for 6 petals.
+  # Each petal is defined by a cubic Bezier curve from the centre outward
+  # and back, giving smooth, full, rounded petals with a clear central disc.
+  n_petals <- 6L
+  n_pts    <- 50L   # points per petal segment
 
-.flower_shape$x <- .flower_shape$x - mean(.flower_shape$x)
-.flower_shape$y <- .flower_shape$y - mean(.flower_shape$y)
+  # Cubic Bezier evaluator
+  bezier3 <- function(p0, p1, p2, p3, t) {
+    mt <- 1 - t
+    outer(mt^3, p0) + outer(3 * mt^2 * t, p1) +
+      outer(3 * mt * t^2, p2) + outer(t^3, p3)
+  }
 
+  t_seq <- seq(0, 1, length.out = n_pts + 1L)
 
-.make_flowers <- function(df, scale = 0.05) {
+  # Petal geometry (in local petal frame, petal points "up"):
+  #   origin  = centre of flower
+  #   tip     = petal tip
+  #   ctrl1/2 = Bezier handles giving width and roundness
+  core_r  <- 0.22   # radius of central disc
+  petal_h <- 1.00   # petal tip distance from centre
+  petal_w <- 0.55   # lateral spread of control points
+
+  all_x <- numeric(0)
+  all_y <- numeric(0)
+
+  for (i in seq_len(n_petals)) {
+    angle  <- (i - 1L) * 2 * pi / n_petals
+
+    # Rotation matrix components
+    ca <- cos(angle); sa <- sin(angle)
+
+    rot <- function(x, y) list(x = ca * x - sa * y, y = sa * x + ca * y)
+
+    # Define petal in upward frame then rotate
+    # p0: on the core circle edge
+    p0_loc <- rot(0, core_r)
+    # p1: first control – sweeps outward to the side
+    p1_loc <- rot(-petal_w, core_r + (petal_h - core_r) * 0.35)
+    # p2: second control – near tip but wide
+    p2_loc <- rot(-petal_w * 0.45, petal_h * 0.95)
+    # p3: petal tip
+    p3_loc <- rot(0, petal_h)
+
+    p0 <- c(p0_loc$x, p0_loc$y)
+    p1 <- c(p1_loc$x, p1_loc$y)
+    p2 <- c(p2_loc$x, p2_loc$y)
+    p3 <- c(p3_loc$x, p3_loc$y)
+
+    # Right side of petal (going out)
+    seg_out <- bezier3(p0, p1, p2, p3, t_seq)
+
+    # Mirror for left side (coming back), run in reverse
+    p1m_loc <- rot( petal_w, core_r + (petal_h - core_r) * 0.35)
+    p2m_loc <- rot( petal_w * 0.45, petal_h * 0.95)
+    p1m <- c(p1m_loc$x, p1m_loc$y)
+    p2m <- c(p2m_loc$x, p2m_loc$y)
+
+    seg_in  <- bezier3(p3, p2m, p1m, p0, t_seq)
+
+    pts <- rbind(seg_out, seg_in[-1L, ])
+    all_x <- c(all_x, pts[, 1L])
+    all_y <- c(all_y, pts[, 2L])
+  }
+
+  # Close path
+  all_x <- c(all_x, all_x[1L])
+  all_y <- c(all_y, all_y[1L])
+  # Smooth with a periodic spline parameterised by cumulative chord length
+  chord  <- sqrt(diff(all_x)^2 + diff(all_y)^2)
+  t_par  <- c(0, cumsum(chord))
+  t_fine <- seq(0, t_par[length(t_par)], length.out = 300L)
+
+  x_sp <- stats::spline(t_par, all_x, xout = t_fine, method = "fmm")$y
+  y_sp <- stats::spline(t_par, all_y, xout = t_fine, method = "fmm")$y
+
+  # Normalise so the longest axis spans 1 unit
+  span <- max(max(x_sp) - min(x_sp), max(y_sp) - min(y_sp))
+  data.frame(x = x_sp / span, y = y_sp / span)
+})
+
+# Place one scaled copy of .flower_shape at each row of `df`.
+# `scale` is the rendered diameter in data units.
+.make_flowers <- function(df, scale = 1.0) {
   do.call(
     rbind,
     lapply(seq_len(nrow(df)), function(i) {
       data.frame(
-        x = .flower_shape$x * scale + df$x[i],
-        y = .flower_shape$y * scale + df$y[i],
+        x          = .flower_shape$x * scale + df$x[i],
+        y          = .flower_shape$y * scale + df$y[i],
         flower_col = df$flower_col[i],
-        id = i
+        id         = i
       )
     })
   )
@@ -588,12 +659,12 @@
 #' @importFrom rlang as_name enquo eval_tidy quo_is_null quo_is_symbol
 #'   quo_is_symbolic
 #' @importFrom ggplot2 aes annotate coord_equal element_blank element_rect
-#'   element_text facet_wrap geom_path geom_point geom_text ggplot labs
-#'   margin scale_alpha_identity scale_color_identity scale_color_manual
-#'   scale_fill_manual theme theme_void unit vars
+#'   element_text facet_wrap geom_path geom_point geom_polygon geom_text
+#'   ggplot labs margin scale_alpha_identity scale_color_identity
+#'   scale_color_manual scale_fill_manual theme theme_void unit vars
 #' @importFrom ggforce geom_circle geom_mark_hull
 #' @importFrom hues iwanthue
-#' @importFrom stats median setNames
+#' @importFrom stats median setNames spline
 #' @importFrom tibble tibble
 make_plot_bouquet <- function(
     data,
@@ -661,15 +732,6 @@ make_plot_bouquet <- function(
       (!is.character(label_color) || length(label_color) != 1L))
     stop("`label_color` must be a single colour string or NULL.", call. = FALSE)
 
-  # -- Resolve flower renderer --------------------------------------------------
-  # Try to use the bundled SVG flower (inst/extdata/flower.svg) via ggsvg.
-  # Falls back silently to the Unicode flower character if ggsvg is not
-  # installed or the file is not found (e.g. during development before install).
-  svg_path   <- system.file("extdata", "flower.svg", package = "bouquets")
-  use_svg    <- nzchar(svg_path) && file.exists(svg_path) &&
-                requireNamespace("ggsvg", quietly = TRUE)
-  svg_string <- if (use_svg) paste(readLines(svg_path, warn = FALSE),
-                                   collapse = "\n") else NULL
   if (!is.logical(show_rings) || length(show_rings) != 1L)
     stop("`show_rings` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(dark_mode) || length(dark_mode) != 1L)
@@ -860,7 +922,7 @@ make_plot_bouquet <- function(
     )
   }
 
-  # -- Ring radii ----------------------------------------------------------------
+  # -- Path extent (used for ring radii and flower sizing) ----------------------
   extent     <- max(sqrt(path_data$x^2 + path_data$y^2), na.rm = TRUE)
   ring_step  <- max(5, round(extent / 25) * 5)
   ring_radii <- if (ring_step <= extent)
@@ -938,40 +1000,30 @@ make_plot_bouquet <- function(
                       color = origin_outer, size = 5, alpha = 0.9) +
     ggplot2::annotate("point", x = 0, y = 0, color = origin_inner, size = 2.2)
 
+  # Flower size: 5% of the overall path extent so flowers scale consistently
+  # regardless of the data range.
+  flower_size <- extent * 0.04
+
   end_data <- path_data |>
     dplyr::group_by(.data$series) |>
     dplyr::slice_tail(n = 1L) |>
     dplyr::ungroup() |>
     dplyr::mutate(flower_col = unname(flower_colors_resolved[.data$series]))
 
-  # Helper: one flower layer for a given data slice
+  # Build one geom_polygon flower layer for the given end-point data slice.
   .flower_layer <- function(df) {
-    if (use_svg) {
-      flowers_poly <- .make_flowers(df, scale = 0.05)
-
-  ggplot2::geom_polygon(
-    data = flowers_poly,
-    ggplot2::aes(
-      x = x,
-      y = y,
-      group = interaction(id),
-      fill = I(flower_col)
-    ),
-    inherit.aes = FALSE,
-    colour = NA
-  )
-    } else {
-      ggplot2::geom_text(
-        data        = df,
-        mapping     = ggplot2::aes(x = .data$x, y = .data$y,
-                                   label = "\u273f",
-                                   colour = I(.data$flower_col)),
-        inherit.aes = FALSE,
-        size        = 5.5,
-        family      = "sans",
-        show.legend = FALSE
-      )
-    }
+    flowers_poly <- .make_flowers(df, scale = flower_size)
+    ggplot2::geom_polygon(
+      data        = flowers_poly,
+      mapping     = ggplot2::aes(
+        x     = .data$x,
+        y     = .data$y,
+        group = .data$id,
+        fill  = I(.data$flower_col)
+      ),
+      inherit.aes = FALSE,
+      colour      = NA
+    )
   }
 
   # Flowers: dimmed first, highlighted on top
