@@ -40,6 +40,7 @@ make_plot_bouquet(
   from = NULL,
   to = NULL,
   normalise = FALSE,
+  show_caption = TRUE,
   verbose = FALSE
 )
 ```
@@ -240,6 +241,13 @@ make_plot_bouquet(
   :   Each series gets its own per-series \\\theta\\ so every path uses
       the full angular range independently of volatility. Useful for
       shape comparison when series have very different variances.
+
+- show_caption:
+
+  Logical. When `TRUE` (default), a caption line is added below the plot
+  describing the origin marker, the flower symbol, and any active
+  `marker_every` or `highlight` settings. Set to `FALSE` to suppress the
+  caption entirely.
 
 - verbose:
 
