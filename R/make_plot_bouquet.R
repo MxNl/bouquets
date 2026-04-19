@@ -481,6 +481,10 @@
 #'       every path uses the full angular range independently of volatility.
 #'       Useful for shape comparison when series have very different variances.}
 #'   }
+#' @param show_caption Logical. When `TRUE` (default), a caption line is
+#'   added below the plot describing the origin marker, the flower symbol,
+#'   and any active `marker_every` or `highlight` settings. Set to `FALSE`
+#'   to suppress the caption entirely.
 #' @param verbose Logical. Print angle diagnostics to the console. Default
 #'   `FALSE`.
 #'
@@ -591,6 +595,7 @@ make_plot_bouquet <- function(
     from              = NULL,
     to                = NULL,
     normalise         = FALSE,
+    show_caption      = TRUE,
     verbose           = FALSE) {
 
   # -- Capture quosures ---------------------------------------------------------
@@ -631,6 +636,8 @@ make_plot_bouquet <- function(
     stop("`show_rings` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(dark_mode) || length(dark_mode) != 1L)
     stop("`dark_mode` must be TRUE or FALSE.", call. = FALSE)
+  if (!is.logical(show_caption) || length(show_caption) != 1L)
+    stop("`show_caption` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(verbose) || length(verbose) != 1L)
     stop("`verbose` must be TRUE or FALSE.", call. = FALSE)
   if (!is.logical(normalise) || length(normalise) != 1L)
@@ -983,12 +990,17 @@ make_plot_bouquet <- function(
     p <- p + ggplot2::facet_wrap(ggplot2::vars(.data[[facet_col_name]]))
 
   # -- Caption -------------------------------------------------------------------
-  caption <- "flower = last step | o = origin"
-  if (!is.null(marker_every))
-    caption <- paste0(caption, " | dot = every ", marker_every_label)
-  if (!is.null(highlight))
-    caption <- paste0(caption, " | highlighted: ",
-                      paste(highlight, collapse = ", "))
+  caption <- if (show_caption) {
+    cap <- "o = origin | flower = last step"
+    if (!is.null(marker_every))
+      cap <- paste0(cap, " | dot = every ", marker_every_label)
+    if (!is.null(highlight))
+      cap <- paste0(cap, " | highlighted: ",
+                    paste(highlight, collapse = ", "))
+    cap
+  } else {
+    NULL
+  }
 
   # -- Theme ---------------------------------------------------------------------
   p_bouquet <- p +
