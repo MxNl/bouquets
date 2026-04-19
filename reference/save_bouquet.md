@@ -83,6 +83,6 @@ p <- make_plot_bouquet(gw, week, station, level)
 tmp <- tempfile(fileext = ".png")
 save_bouquet(p, tmp)
 #> <bouquet_plot>  3 series | theta = 14.4 deg | binding: C
-#> Saved bouquet plot to: /tmp/Rtmpv5fiW8/file1d2225b24c31.png
+#> Saved bouquet plot to: /tmp/RtmpzS2tR6/file1d5546b9013b.png
 # }
 ```
